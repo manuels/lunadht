@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<node name="/org/manuel/LunaDHT">
+<interface name='org.manuel.LunaDHT'>
+	<property name="joined" type="b" access="read"/>
+
+	<method name="join">
+		<arg type="s" name="host" direction="in" />
+		<arg type="q" name="ip" direction="in" />
+	</method>
+
+	<method name="get">
+		<arg type="u" name="app_id" direction="in" />
+		<arg type="s" name="key" direction="in" />
+	</method>
+	<method name="put">
+		<arg type="u" name="app_id" direction="in" />
+		<arg type="s" name="key" direction="in" />
+		<arg type="s" name="value" direction="in" />
+		<arg type="x" name="ttl" direction="in" />
+	</method>
+</interface>
+</node>
