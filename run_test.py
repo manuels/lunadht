@@ -28,7 +28,7 @@ def main():
 	                     '/org/manuel/LunaDHT')
 
 	#print dht.join("localhost", 7786,
-	print dht.join("2a02:908:f62a:3c80:e4bc:ea4f:369b:7849", 7786,
+	print dht.join("::1", 7786,
 		dbus_interface='org.manuel.LunaDHT')
 
 	time.sleep(5)

@@ -4,7 +4,7 @@
 #include <assert.h>
 
 int main() {
-	int port = 7786;
+	int port = 17786;
 	int sock[2];
 	int res;
 	int pid;

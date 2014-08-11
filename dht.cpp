@@ -20,35 +20,41 @@ on_joined(bool res) {
 	assert(len == sizeof(msg));
 }
 
-static void
-on_get_finished(bool result, libcage::dht::value_set_ptr vset) {
-	libcage::dht::value_set::iterator it;
-	struct ipc_message msg;
-	int len;
-	char *buf;
+class get_callback
+{
+public:
+	void *m_user_data;
 
-	msg.type = RESULT;
-	msg.result.length = vset ? vset->size() : 0;
-	
-	len = send(sock, &msg, sizeof(msg), 0);
-	assert(len == sizeof(msg));
+	void operator() (bool result, libcage::dht::value_set_ptr vset) {
+		libcage::dht::value_set::iterator it;
+		struct ipc_message msg;
+		int len;
+		char *buf;
 
-	if (!result)
-		return;
+		msg.type = RESULT;
+		msg.result.user_data = this->m_user_data;
+		msg.result.length = vset ? vset->size() : 0;
 
-	BOOST_FOREACH(const libcage::dht::value_t &val, *vset) {
-		buf = val.value.get();
+		len = send(sock, &msg, sizeof(msg), 0);
+		assert(len == sizeof(msg));
 
-		len = send(sock, &val.len, sizeof(val.len), 0);
-		assert(len == sizeof(val.len));
+		if (!result)
+			return;
 
-		len = send(sock, buf, val.len, 0);
-		assert(len == val.len);
+		BOOST_FOREACH(const libcage::dht::value_t &val, *vset) {
+			buf = val.value.get();
+
+			len = send(sock, &val.len, sizeof(val.len), 0);
+			assert(len == sizeof(val.len));
+
+			len = send(sock, buf, val.len, 0);
+			assert(len == val.len);
+		}
 	}
-}
+};
 
 static void
-get(libcage::cage *cage, unsigned int app_id, char *key)
+get(libcage::cage *cage, unsigned int app_id, char *key, void *user_data)
 {
 	int len;
 	unsigned int *buf;
@@ -62,6 +68,9 @@ get(libcage::cage *cage, unsigned int app_id, char *key)
 	for (int i = 0; i < len; ++i)
 		printf("%02x", ((unsigned char *) buf)[i]);
 	printf("\n");
+
+	get_callback on_get_finished;
+	on_get_finished.m_user_data = user_data;
 	cage->get(buf, len, on_get_finished);
 }
 
@@ -114,7 +123,7 @@ on_ipc(int fd, short ev_type, void *user_data) {
 		assert(len == msg.get.keylen);
 		assert(strlen(key)+1 == msg.get.keylen);
 
-		get(cage, msg.get.app_id, key);
+		get(cage, msg.get.app_id, key, msg.get.user_data);
 		free(key);
 		break;
 
@@ -143,8 +152,8 @@ on_ipc(int fd, short ev_type, void *user_data) {
 extern "C" int
 run_dht(int socket, int port) {
 	sock = socket;
-	event_init(); 
-	
+	event_init();
+
 	/* setup dht */
 	libcage::cage *cage = new libcage::cage();
 	cage->set_global();

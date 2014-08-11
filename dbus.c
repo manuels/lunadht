@@ -10,46 +10,84 @@
 
 static int sock;
 
+static void
+present_results(OrgManuelLunaDHT *object,
+	GDBusMethodInvocation *invocation,
+	char **results)
+{
+	/*
+	GVariantBuilder *builder;
+	GVariant *value;
+
+	builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
+
+	while(*results) {
+		g_variant_builder_add(builder, "s", *results);
+		results++;
+	}
+
+	value = g_variant_new("as", builder);
+	*/
+	g_message("invocation1 %x", invocation);
+	org_manuel_luna_dht_complete_get(object, invocation, results);
+	g_message("invocation2");
+
+	/*
+	g_variant_builder_unref(builder);
+	g_variant_unref (value);
+	*/
+}
+
 static gboolean
-on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data) {
+on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
+{
+	OrgManuelLunaDHT *skeleton;
+	GDBusMethodInvocation *invocation;
 	struct ipc_message msg;
 	char *buf;
+	char **results;
 	int len;
 	int size;
 	int i;
+	int flags;
 
-	int flags = MSG_WAITALL;
+	skeleton = ORG_MANUEL_LUNA_DHT(user_data);
 
-	GObject *obj = G_OBJECT(user_data);
-
+	flags = MSG_WAITALL;
 	len = recv(sock, &msg, sizeof(msg), flags);
 	g_assert(len == sizeof(msg));
 
 	switch(msg.type) {
 	case JOINED:
 		g_debug("joined = %i\n", msg.joined.result);
-		g_object_set(obj, "joined", msg.joined.result, NULL);
+		g_object_set(skeleton, "joined", msg.joined.result, NULL);
 		break;
 
 	case RESULT:
 		g_debug("result len=%i!\n", msg.result.length);
 
-		buf = NULL;
+		results = malloc((msg.result.length+1)*sizeof(char *));
 		for (i = 0; i < msg.result.length; ++i) {
 			len = recv(sock, &size, sizeof(size), flags);
 			g_assert(len == sizeof(size));
 
-			g_debug("size=%i\n", size);
-			buf = realloc(buf, size);
+			buf = malloc(size);
 			len = recv(sock, buf, size, flags);
 			g_assert(len == size);
 
-			printf("res = %i\n", size);
+			results[i] = buf;
 		}
-		if (buf)
-			free(buf);
+		results[i] = NULL;
 
-		// TODO
+		invocation = (GDBusMethodInvocation *) msg.result.user_data;
+		present_results(skeleton, invocation, results);
+
+		/*
+		for (i = 0; i < msg.result.length; ++i)
+			free(results[i]);
+
+		free(results);
+		*/
 		break;
 
 	default:
@@ -66,6 +104,7 @@ static gboolean on_dbus_join(OrgManuelLunaDHT *object,
 {
 	int len;
 	struct ipc_message msg;
+
 	msg.type = JOIN;
 	msg.join.hostlen = strlen(host)+1;
 	msg.join.port = port;
@@ -86,17 +125,17 @@ static gboolean on_dbus_get(OrgManuelLunaDHT *object,
 {
 	int len;
 	struct ipc_message msg;
+
 	msg.type = GET;
 	msg.get.app_id = app_id;
 	msg.get.keylen = strlen(key)+1;
+	msg.get.user_data = invocation;
 
 	len = send(sock, &msg, sizeof(msg), 0);
 	g_assert(len == sizeof(msg));
 
 	len = send(sock, key, msg.get.keylen, 0);
 	g_assert(len == msg.get.keylen);
-
-	org_manuel_luna_dht_complete_get(object, invocation);
 
 	return TRUE;
 }
@@ -110,6 +149,7 @@ static gboolean on_dbus_put(OrgManuelLunaDHT *object,
 {
 	int len;
 	struct ipc_message msg;
+
 	msg.type = PUT;
 	msg.put.app_id = app_id;
 	msg.put.keylen = strlen(key)+1;
@@ -138,7 +178,7 @@ on_service_name_acquired(GDBusConnection *dbus_conn,
 	g_debug("DBus name aquired.");
 
 	char path[] = "/org/manuel/LunaDHT";
-	
+
 	OrgManuelLunaDHT *skeleton;
 	skeleton = org_manuel_luna_dht_skeleton_new();
 	g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(skeleton),
@@ -160,7 +200,7 @@ on_service_name_acquired(GDBusConnection *dbus_conn,
 
 
 int run_dbus(int socket) {
-    g_type_init();
+	g_type_init();
 
 	sock = socket;
 

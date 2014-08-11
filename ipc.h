@@ -2,7 +2,7 @@ enum ipc_type {
 	JOIN,
 	PUT,
 	GET,
-	
+
 	RESULT,
 	JOINED,
 };
@@ -22,10 +22,12 @@ struct put_message {
 struct get_message {
 	unsigned int app_id;
 	unsigned int keylen;
+	void *user_data;
 };
 
 struct result_message {
 	int length;
+	void *user_data;
 };
 
 struct joined_message {
