@@ -11,14 +11,14 @@
 
 	<method name="get">
 		<arg type="u" name="app_id" direction="in" />
-		<arg type="s" name="key" direction="in" />
+		<arg type="ay" name="key" direction="in" />
 
-		<arg type="as" name="results" direction="out" />
+		<arg type="aay" name="results" direction="out" />
 	</method>
 	<method name="put">
 		<arg type="u" name="app_id" direction="in" />
-		<arg type="s" name="key" direction="in" />
-		<arg type="s" name="value" direction="in" />
+		<arg type="ay" name="key" direction="in" />
+		<arg type="ay" name="value" direction="in" />
 		<arg type="x" name="ttl" direction="in" />
 	</method>
 </interface>

@@ -55,15 +55,15 @@ public:
 };
 
 static void
-get(libcage::cage *cage, unsigned int app_id, char *key, void *user_data)
+get(libcage::cage *cage, unsigned int app_id, char *key, int keylen, void *user_data)
 {
 	int len;
 	unsigned int *buf;
 
-	len = sizeof(app_id) + strlen(key)+1;
+	len = sizeof(app_id) + keylen;
 	buf = (unsigned int *) malloc(len);
 	buf[0] = app_id;
-	memcpy(&(buf[1]), key, strlen(key)+1);
+	memcpy(&(buf[1]), key, keylen);
 
 	printf("get: %i ", len);
 	for (int i = 0; i < len; ++i)
@@ -76,22 +76,22 @@ get(libcage::cage *cage, unsigned int app_id, char *key, void *user_data)
 }
 
 static void
-put(libcage::cage *cage, unsigned int app_id, char *key,
-	char *value, int unsigned ttl)
+put(libcage::cage *cage, unsigned int app_id, char *key, int keylen,
+	char *value, int valuelen, int unsigned ttl)
 {
 	int len;
 	unsigned int *buf;
 
-	len = sizeof(app_id) + strlen(key)+1;
+	len = sizeof(app_id) + keylen;
 	buf = (unsigned int *) malloc(len);
 	buf[0] = app_id;
-	memcpy(&buf[1], key, strlen(key)+1);
+	memcpy(&buf[1], key, keylen);
 
 	printf("put: %i ", len);
 	for (int i = 0; i < len; ++i)
 		printf("%02x", ((unsigned char *) buf)[i]);
 	printf("\n");
-	cage->put(buf, len, value, strlen(value)+1, ttl);
+	cage->put(buf, len, value, valuelen, ttl);
 	cage->print_state();
 }
 
@@ -122,9 +122,8 @@ on_ipc(int fd, short ev_type, void *user_data) {
 
 		len = recv(fd, key, msg.get.keylen, flags);
 		assert(len == msg.get.keylen);
-		assert(strlen(key)+1 == msg.get.keylen);
 
-		get(cage, msg.get.app_id, key, msg.get.user_data);
+		get(cage, msg.get.app_id, key, msg.get.keylen, msg.get.user_data);
 		free(key);
 		break;
 
@@ -134,13 +133,11 @@ on_ipc(int fd, short ev_type, void *user_data) {
 
 		len = recv(fd, key, msg.put.keylen, flags);
 		assert(len == msg.put.keylen);
-		assert(strlen(key)+1 == msg.put.keylen);
 
 		len = recv(fd, value, msg.put.valuelen, flags);
 		assert(len == msg.put.valuelen);
-		assert(strlen(value)+1 == msg.put.valuelen);
 
-		put(cage, msg.put.app_id, key, value, msg.put.ttl);
+		put(cage, msg.put.app_id, key, msg.put.keylen, value, msg.put.valuelen, msg.put.ttl);
 		free(key);
 		free(value);
 		break;

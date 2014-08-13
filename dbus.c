@@ -13,29 +13,30 @@ static int sock;
 static void
 present_results(OrgManuelLunaDHT *object,
 	GDBusMethodInvocation *invocation,
-	char **results)
+	char **results,
+	int *length)
 {
-	/*
 	GVariantBuilder *builder;
-	GVariant *value;
+	GVariant *res;
+	int i;
 
-	builder = g_variant_builder_new(G_VARIANT_TYPE("as"));
+	builder = g_variant_builder_new(G_VARIANT_TYPE("aay"));
 
 	while(*results) {
-		g_variant_builder_add(builder, "s", *results);
+		g_variant_builder_open(builder, G_VARIANT_TYPE("ay"));
+		/*for (i = 0; i < length[i]; ++i)
+			g_variant_builder_add(builder, "y", (*results)[i]);*/
+		g_variant_builder_add_value(builder,
+			g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, *results, length[i], sizeof(char)));
+		g_variant_builder_close(builder);
 		results++;
 	}
+	res = g_variant_builder_end(builder);
 
-	value = g_variant_new("as", builder);
-	*/
-	g_message("invocation1 %x", invocation);
-	org_manuel_luna_dht_complete_get(object, invocation, results);
-	g_message("invocation2");
+	org_manuel_luna_dht_complete_get(object, invocation, res);
 
-	/*
 	g_variant_builder_unref(builder);
-	g_variant_unref (value);
-	*/
+//		g_variant_unref(res);
 }
 
 static gboolean
@@ -46,6 +47,7 @@ on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 	struct ipc_message msg;
 	char *buf;
 	char **results;
+	int *length;
 	int len;
 	int size;
 	int i;
@@ -67,6 +69,7 @@ on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 		g_debug("result len=%i!\n", msg.result.length);
 
 		results = malloc((msg.result.length+1)*sizeof(char *));
+		length = malloc((msg.result.length+1)*sizeof(int));
 		for (i = 0; i < msg.result.length; ++i) {
 			len = recv(sock, &size, sizeof(size), flags);
 			g_assert(len == sizeof(size));
@@ -76,17 +79,19 @@ on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 			g_assert(len == size);
 
 			results[i] = buf;
+			length[i] = len;
 		}
 		results[i] = NULL;
 
 		invocation = (GDBusMethodInvocation *) msg.result.user_data;
-		present_results(skeleton, invocation, results);
+		present_results(skeleton, invocation, results, length);
 
 		/*
 		for (i = 0; i < msg.result.length; ++i)
 			free(results[i]);
 
 		free(results);
+		free(length);
 		*/
 		break;
 
@@ -121,14 +126,18 @@ static gboolean on_dbus_join(OrgManuelLunaDHT *object,
 static gboolean on_dbus_get(OrgManuelLunaDHT *object,
     GDBusMethodInvocation *invocation,
     guint app_id,
-    const gchar *key)
+    GVariant *arg_key)
 {
 	int len;
 	struct ipc_message msg;
+	char *key;
+	gsize keylen;
+
+	key = g_variant_get_fixed_array(arg_key, &keylen, sizeof(char));
 
 	msg.type = GET;
 	msg.get.app_id = app_id;
-	msg.get.keylen = strlen(key)+1;
+	msg.get.keylen = keylen;
 	msg.get.user_data = invocation;
 
 	len = send(sock, &msg, sizeof(msg), 0);
@@ -143,23 +152,30 @@ static gboolean on_dbus_get(OrgManuelLunaDHT *object,
 static gboolean on_dbus_put(OrgManuelLunaDHT *object,
     GDBusMethodInvocation *invocation,
     guint app_id,
-    const gchar *key,
-    const gchar *value,
+    GVariant *arg_key,
+    GVariant *arg_value,
     guint64 ttl)
 {
 	int len;
 	struct ipc_message msg;
+	char *key;
+	char *value;
+	gsize keylen;
+	gsize valuelen;
+
+	key = g_variant_get_fixed_array(arg_key, &keylen, sizeof(char));
+	value = g_variant_get_fixed_array(arg_value, &valuelen, sizeof(char));
 
 	msg.type = PUT;
 	msg.put.app_id = app_id;
-	msg.put.keylen = strlen(key)+1;
-	msg.put.valuelen = strlen(value)+1;
+	msg.put.keylen = keylen;
+	msg.put.valuelen = valuelen;
 	msg.put.ttl = ttl;
 
 	len = send(sock, &msg, sizeof(msg), 0);
 	g_assert(len == sizeof(msg));
 
-	g_debug("dbus put: %s", key);
+	g_debug("dbus put: len=%i", keylen);
 	len = send(sock, key, msg.put.keylen, 0);
 	g_assert(len == msg.put.keylen);
 

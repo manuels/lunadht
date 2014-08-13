@@ -34,11 +34,11 @@ def main():
 	time.sleep(5)
 
 	for i in range(5):
-		print dht.put(0xDEAD, "foo", "bar", 60*60,
+		print dht.put(0xDEAD, "foo\0", "bar\0", 60*60,
 			dbus_interface='org.manuel.LunaDHT')
 		time.sleep(1)
 
-		print dht.get(0xDEAD, "foo",
+		print dht.get(0xDEAD, "foo\0",
 			dbus_interface='org.manuel.LunaDHT')
 		time.sleep(1)
 
