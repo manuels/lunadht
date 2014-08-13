@@ -24,6 +24,7 @@ class get_callback
 {
 public:
 	void *m_user_data;
+	unsigned int m_app_id;
 
 	void operator() (bool result, libcage::dht::value_set_ptr vset) {
 		libcage::dht::value_set::iterator it;
