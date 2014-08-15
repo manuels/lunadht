@@ -6,6 +6,9 @@ all:
 		--annotate "org.manuel.LunaDHT.put()[value]" org.gtk.GDBus.C.ForceGVariant true \
 		--generate-c-code network-bindings network.xml
 
+	mkdir -p ./glib-2.0/schemas
+	glib-compile-schemas --targetdir=./glib-2.0/schemas .
+
 	gcc -g -c `pkg-config --cflags glib-2.0 gio-2.0 gio-unix-2.0` network-bindings.c
 	gcc -g -c `pkg-config --cflags glib-2.0` dbus.c
 	g++ -g -c `pkg-config --cflags libevent` -I /usr/include dht.cpp

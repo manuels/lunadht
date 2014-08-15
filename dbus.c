@@ -9,6 +9,13 @@
 #include "network-bindings.h"
 
 static int sock;
+static GSettings *settings = NULL;
+static GMainLoop *main_loop;
+
+struct node {
+	char *host;
+	guint16 port;
+};
 
 static void
 present_results(OrgManuelLunaDHT *object,
@@ -47,7 +54,9 @@ on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 	struct ipc_message msg;
 	char *buf;
 	char **results;
+	struct node *node_list;
 	int *length;
+	char *id;
 	int len;
 	int size;
 	int i;
@@ -69,7 +78,7 @@ on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 		g_debug("result len=%i!\n", msg.result.length);
 
 		results = malloc((msg.result.length+1)*sizeof(char *));
-		length = malloc((msg.result.length+1)*sizeof(int));
+		length = malloc((msg.result.length)*sizeof(int));
 		for (i = 0; i < msg.result.length; ++i) {
 			len = recv(sock, &size, sizeof(size), flags);
 			g_assert(len == sizeof(size));
@@ -93,6 +102,42 @@ on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 		free(results);
 		free(length);
 		*/
+		break;
+
+	case GET_NODE_ID:
+		id = malloc(msg.node_id.length);
+
+		len = recv(sock, id, msg.node_id.length, 0);
+		g_assert(len == msg.node_id.length);
+
+		save_node_id(id, len);
+
+		free(id);
+		break;
+
+	case NODE_LIST:
+		g_debug("node_list len=%i!\n", msg.node_list.length);
+
+		node_list = malloc((msg.node_list.length+1)*sizeof(struct node));
+		for (i = 0; i < msg.result.length; ++i) {
+			len = recv(sock, &size, sizeof(size), flags);
+			g_assert(len == sizeof(size));
+
+			buf = malloc(size);
+			len = recv(sock, buf, size, flags);
+			g_assert(len == size);
+
+			len = recv(sock, &(node_list[i].port), sizeof(node_list[i].port), flags);
+			g_assert(len == sizeof(node_list[i].port));
+
+			node_list[i].host = buf;
+		}
+
+		save_node_list(node_list, msg.result.length);
+
+		msg.type = QUIT;
+		send(sock, &msg, sizeof(msg), 0);
+		g_main_quit(main_loop);
 		break;
 
 	default:
@@ -120,7 +165,10 @@ static gboolean on_dbus_join(OrgManuelLunaDHT *object,
 	len = send(sock, host, strlen(host)+1, 0);
 	g_assert(len == strlen(host)+1);
 
-	org_manuel_luna_dht_complete_join(object, invocation);
+	if((object != NULL) && (invocation != NULL))
+		org_manuel_luna_dht_complete_join(object, invocation);
+
+	return TRUE;
 }
 
 static gboolean on_dbus_get(OrgManuelLunaDHT *object,
@@ -214,13 +262,109 @@ on_service_name_acquired(GDBusConnection *dbus_conn,
 	g_io_add_watch(ch, G_IO_IN, on_ipc, skeleton);
 }
 
+int load_nodes() {
+	if (settings == NULL)
+		return;
+
+	GVariant *nodes;
+	char *host;
+	guint16 port;
+	int i;
+
+	settings = g_settings_new_with_path("org.manuel.LunaDHT", ".");
+
+	nodes = g_settings_get_value(settings, "nodes");
+
+	for (i = 0; i < g_variant_n_children(nodes); ++i) {
+		g_variant_get_child(nodes, i, "(&sq)", host, &port);
+		on_dbus_join(NULL, NULL, host, port);
+	}
+}
+
+void
+sig_abort() {
+	if(settings == NULL)
+		return;
+
+	struct ipc_message msg;
+
+	msg.type = NODE_LIST;
+	send(sock, &msg, sizeof(msg), 0);
+}
+
+void
+save_node_list(struct node *nodes, int len) {
+	if (settings == NULL)
+		return;
+
+	GVariantBuilder *builder;
+	GVariant *res;
+	struct ipc_message msg;
+
+	builder = g_variant_builder_new(G_VARIANT_TYPE("a(aq)"));
+
+	while(len > 0) {
+		g_variant_builder_open(builder, G_VARIANT_TYPE("(aq)"));
+		//g_variant_builder_add_value(builder,
+		//	g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, *results, length[i], sizeof(char)));
+		g_variant_builder_close(builder);
+
+		nodes++;
+		len--;
+	}
+	res = g_variant_builder_end(builder);
+
+	nodes = g_settings_set_value(settings, "nodes", res);
+	g_variant_builder_unref(builder);
+}
+
+void
+save_node_id(char *id, int len) {
+	if (settings == NULL)
+		return;
+
+	GVariant *val;
+	val = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, id, len, sizeof(char));
+
+	g_settings_set_value(settings, "id", val);
+	g_variant_unref(val);
+}
+
+void
+load_node_id(char *id, int len) {
+	if (settings == NULL)
+		return;
+
+	struct ipc_message msg;
+	GVariant *val;
+	int length;
+
+	val = g_settings_get_value(settings, "id");
+	id = g_variant_get_fixed_array(val, &len, sizeof(char));
+
+	if (id == NULL);
+		goto out;
+
+	msg.type = SET_NODE_ID;
+	msg.node_id.length = len;
+
+	length = send(sock, &msg, sizeof(msg), 0);
+	g_assert(length == sizeof(msg));
+
+	length = send(sock, id, msg.node_id.length, 0);
+	g_assert(length == sizeof(msg));
+
+	free(id);
+
+out:
+	g_variant_unref(val);
+}
 
 int run_dbus(int socket) {
 	g_type_init();
+	signal(SIGABRT, sig_abort);
 
 	sock = socket;
-
-	GMainLoop *main_loop;
 	main_loop = g_main_loop_new(NULL, TRUE);
 
 	/* setup dbus */
@@ -235,6 +379,8 @@ int run_dbus(int socket) {
 	        NULL,
 	        NULL,
 	        NULL);
+
+	load_nodes();
 
 	g_main_loop_run(main_loop);
 

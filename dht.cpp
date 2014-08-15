@@ -4,6 +4,10 @@
 #include "libcage/src/cage.hpp"
 #include "ipc.h"
 
+#ifndef MAX
+#define MAX(a,b) a>b ? a : b
+#endif
+
 static int sock;
 
 static void
@@ -27,7 +31,7 @@ public:
 	unsigned int m_app_id;
 
 	void operator() (bool result, libcage::dht::value_set_ptr vset) {
-		libcage::dht::value_set::iterator it;
+		libcage::dht::value_set::const_iterator it;
 		struct ipc_message msg;
 		int len;
 		char *buf;
@@ -96,14 +100,62 @@ put(libcage::cage *cage, unsigned int app_id, char *key, int keylen,
 }
 
 static void
+send_node_list(std::list<libcage::cageaddr> const nodes) {
+	char host[MAX(INET6_ADDRSTRLEN, INET_ADDRSTRLEN)];
+	std::list<libcage::cageaddr>::const_iterator it;
+	struct ipc_message msg;
+	unsigned short port;
+	int len;
+	int length;
+	const char *res;
+	libcage::in6_ptr in6;
+	libcage::in_ptr in4;
+
+	msg.type = NODE_LIST;
+	msg.node_list.length = nodes.size();
+
+	len = send(sock, &msg, sizeof(msg), 0);
+	assert(len == sizeof(msg));
+
+	for (it = nodes.begin(); it != nodes.end(); it++) {
+		if (it->domain == PF_INET6) {
+			in6 = boost::get<libcage::in6_ptr>(it->saddr);
+			res = inet_ntop(it->domain, &(*in6), host, sizeof(host));
+			port = ntohs(in6->sin6_port);
+		}
+		else if (it->domain == PF_INET) {
+			in4 = boost::get<libcage::in_ptr>(it->saddr);
+			res = inet_ntop(it->domain, &(*in4), host, sizeof(host));
+			port = ntohs(in4->sin_port);
+		}
+		else
+			assert(0==1 && "unknown addr domain");
+		assert(res != NULL);
+
+		len = send(sock, &port, sizeof(port), 0);
+		assert(len == sizeof(port));
+
+		length = strlen(host)+1;
+		len = send(sock, &length, sizeof(length), 0);
+		assert(len == sizeof(length));
+
+		len = send(sock, host, length, 0);
+		assert(len == length);
+	}
+}
+
+static void
 on_ipc(int fd, short ev_type, void *user_data) {
 	int len;
 	char *key;
 	char *host;
 	char *value;
+	char *id;
+	std::string str;
 	struct ipc_message msg;
 	int flags = MSG_WAITALL;
 	libcage::cage *cage = (libcage::cage *) user_data;
+        std::list<libcage::cageaddr> nodes;
 
 	len = recv(fd, &msg, sizeof(msg), flags);
 	assert(len == sizeof(msg));
@@ -140,6 +192,37 @@ on_ipc(int fd, short ev_type, void *user_data) {
 		put(cage, msg.put.app_id, key, msg.put.keylen, value, msg.put.valuelen, msg.put.ttl);
 		free(key);
 		free(value);
+		break;
+
+	case NODE_LIST:
+		nodes = cage->get_table();
+		send_node_list(nodes);
+		break;
+
+	case GET_NODE_ID:
+		id = (char *) cage->get_id_str().c_str();
+		msg.type = GET_NODE_ID;
+		msg.node_id.length = strlen(id);
+
+		len = send(sock, &msg, sizeof(msg), 0);
+		assert(len == sizeof(msg));
+
+		len = send(sock, id, msg.node_id.length, 0);
+		assert(len == msg.node_id.length);
+		break;
+
+	case SET_NODE_ID:
+		id = (char *) malloc(msg.node_id.length);
+
+		len = recv(sock, id, msg.node_id.length, 0);
+		assert(len == msg.node_id.length);
+
+		str = std::string(id, len);
+		cage->set_id_str(str);
+
+		free(id);
+	case QUIT:
+		event_loopbreak();
 		break;
 
 	default:

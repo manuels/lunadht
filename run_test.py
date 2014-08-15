@@ -17,6 +17,7 @@ def main():
 	env = dict(os.environ)
 	env.update({
 		'G_MESSAGES_DEBUG': 'all',
+		'XDG_DATA_DIRS': '.',
 	})
 	proc_id = os.spawnve(os.P_NOWAIT, './a.out', [], env)
 	time.sleep(1)
@@ -24,8 +25,7 @@ def main():
 	# create connections
 	bus = dbus.SessionBus(mainloop=DBusGMainLoop())
 	bus_name = 'org.manuel.LunaDHT'
-	dht = bus.get_object(bus_name,
-	                     '/org/manuel/LunaDHT')
+	dht = bus.get_object(bus_name, '/org/manuel/LunaDHT')
 
 	#print dht.join("localhost", 7786,
 	print dht.join("::1", 7786,
