@@ -25,17 +25,18 @@ present_results(OrgManuelLunaDHT *object,
 {
 	GVariantBuilder *builder;
 	GVariant *res;
+	GVariant *var;
 	int i;
 
-	builder = g_variant_builder_new(G_VARIANT_TYPE("aay"));
+	builder = g_variant_builder_new(G_VARIANT_TYPE_BYTESTRING_ARRAY);
 
+	i = 0;
 	while(*results) {
-		g_variant_builder_open(builder, G_VARIANT_TYPE("ay"));
-		/*for (i = 0; i < length[i]; ++i)
-			g_variant_builder_add(builder, "y", (*results)[i]);*/
-		g_variant_builder_add_value(builder,
-			g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, *results, length[i], sizeof(char)));
-		g_variant_builder_close(builder);
+		var = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, *results, length[i], sizeof(char));
+		g_debug("g_variant_new_fixed_array type=%s", g_variant_get_type_string(var));
+		g_variant_builder_add_value(builder, var);
+
+		i++;
 		results++;
 	}
 	res = g_variant_builder_end(builder);
@@ -360,7 +361,7 @@ out:
 	g_variant_unref(val);
 }
 
-int run_dbus(int socket) {
+int run_dbus(int socket, char *dbus_name) {
 	g_type_init();
 	signal(SIGABRT, sig_abort);
 
@@ -371,7 +372,7 @@ int run_dbus(int socket) {
 	g_debug("Acquiring DBus name...");
 	g_bus_own_name(
 	        G_BUS_TYPE_SESSION,
-	        "org.manuel.LunaDHT",
+	        dbus_name,
 	        G_BUS_NAME_OWNER_FLAGS_ALLOW_REPLACEMENT |
 	        G_BUS_NAME_OWNER_FLAGS_REPLACE,
 	        NULL,
