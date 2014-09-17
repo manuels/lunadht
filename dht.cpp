@@ -18,8 +18,6 @@ on_joined(bool res) {
 	msg.type = JOINED;
 	msg.joined.result = res;
 
-	printf("join\n");
-
 	len = send(sock, &msg, sizeof(msg), 0);
 	assert(len == sizeof(msg));
 }
@@ -69,11 +67,6 @@ get(libcage::cage *cage, unsigned int app_id, char *key, int keylen, void *user_
 	buf[0] = app_id;
 	memcpy(&(buf[1]), key, keylen);
 
-	printf("get: %i ", len);
-	for (int i = 0; i < len; ++i)
-		printf("%02x", ((unsigned char *) buf)[i]);
-	printf("\n");
-
 	get_callback on_get_finished;
 	on_get_finished.m_user_data = user_data;
 	cage->get(buf, len, on_get_finished);
@@ -91,12 +84,7 @@ put(libcage::cage *cage, unsigned int app_id, char *key, int keylen,
 	buf[0] = app_id;
 	memcpy(&buf[1], key, keylen);
 
-	printf("put: %i ", len);
-	for (int i = 0; i < len; ++i)
-		printf("%02x", ((unsigned char *) buf)[i]);
-	printf("\n");
 	cage->put(buf, len, value, valuelen, ttl);
-	cage->print_state();
 }
 
 static void
@@ -146,7 +134,7 @@ send_node_list(std::list<libcage::cageaddr> const nodes) {
 
 static void
 on_ipc(int fd, short ev_type, void *user_data) {
-	int len;
+	ssize_t len;
 	char *key;
 	char *host;
 	char *value;

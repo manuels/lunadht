@@ -9,9 +9,12 @@ all:
 	mkdir -p ./glib-2.0/schemas
 	glib-compile-schemas --targetdir=./glib-2.0/schemas .
 
-	gcc -g -c `pkg-config --cflags glib-2.0 gio-2.0 gio-unix-2.0` network-bindings.c
-	gcc -g -c `pkg-config --cflags glib-2.0` dbus.c
-	g++ -g -c `pkg-config --cflags libevent` -I /usr/include dht.cpp
-	gcc -g -c main.c
+	gcc -g -c -Wall `pkg-config --cflags glib-2.0 gio-2.0 gio-unix-2.0` network-bindings.c
+	gcc -g -c -Wall `pkg-config --cflags glib-2.0` dbus.c
+	g++ -g -c -Wall `pkg-config --cflags libevent` -I /usr/include dht.cpp
+	gcc -g -c -Wall main.c
 
-	g++ -g -o lunadhtd network-bindings.o dbus.o dht.o main.o libcage/src/*.o `pkg-config --libs openssl glib-2.0 gio-2.0 gio-unix-2.0 libevent`
+	g++ -g -Wall -o lunadhtd \
+		network-bindings.o dbus.o dht.o main.o \
+		libcage/src/*.o \
+		`pkg-config --libs openssl glib-2.0 gio-2.0 gio-unix-2.0 libevent`

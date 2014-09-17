@@ -19,7 +19,8 @@ def main():
 		'G_MESSAGES_DEBUG': 'all',
 		'XDG_DATA_DIRS': '.',
 	})
-	proc_id = os.spawnve(os.P_NOWAIT, './a.out', [], env)
+	pid1 = os.spawnve(os.P_NOWAIT, './lunadhtd', '-b org.manuel.LunaDHTTest -p 17768'.split(), env)
+	pid2 = os.spawnve(os.P_NOWAIT, './lunadhtd', [], env)
 	time.sleep(1)
 
 	# create connections
@@ -27,20 +28,29 @@ def main():
 	bus_name = 'org.manuel.LunaDHT'
 	dht = bus.get_object(bus_name, '/org/manuel/LunaDHT')
 
-	#print dht.join("localhost", 7786,
-	print dht.join("::1", 7786,
-		dbus_interface='org.manuel.LunaDHT')
-
-	time.sleep(5)
+	dht.join("::1", 7786, dbus_interface='org.manuel.LunaDHT')
 
 	for i in range(5):
-		print dht.put(0xDEAD, "foo\0", "bar\0", 60*60,
+		dht.put(0xDEAD, "foo\0", "bar\0", 60*60,
 			dbus_interface='org.manuel.LunaDHT')
 		time.sleep(1)
 
-		print dht.get(0xDEAD, "foo\0",
+		res = dht.get(0xDEAD, "foo\0",
 			dbus_interface='org.manuel.LunaDHT')
-		time.sleep(1)
+		if len(res) > 0:
+			actual_result = ''.join([chr(x) for x in res[0]])
+			expected_result = "bar\0"
+
+			if actual_result == expected_result:
+				print 'Test suceeded.'
+
+				os.kill(pid1, signal.SIGTERM)
+				os.kill(pid2, signal.SIGTERM)
+				os.wait()
+				os.wait()
+				return
+
+	raise 'Test failed.'
 
 	main_loop.run()
 

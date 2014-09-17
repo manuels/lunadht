@@ -1,11 +1,18 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <assert.h>
+#include <sys/wait.h>
+
+int run_dbus(int socket, char *dbus_name);
+int run_dht(int socket, int port);
 
 int main(int argc, char *argv[]) {
-	int port = 17786;
+	int port = 7786;
 	int sock[2];
 	char *dbus_name = "org.manuel.LunaDHT";
 	int res;
@@ -15,18 +22,16 @@ int main(int argc, char *argv[]) {
 	while ((opt = getopt(argc, argv, "b:p:")) != -1) {
 		switch (opt) {
 		case 'b':
-			dbus_name = optarg;
+			dbus_name = strdup(optarg);
 			break;
 		case 'p':
 			port = atoi(optarg);
 			break;
 		default: /* '?' */
-			fprintf(2, "Usage: %s [-p udp_port] [-b dbus_busname]\n",
-				argv[0]);
+			printf("Usage: %s [-b dbus_busname] [-p udp_port]\n", argv[0]);
 			exit(1);
 		}
 	}
-
 
 	res = socketpair(AF_LOCAL, SOCK_STREAM, 0, sock);
 	assert(res > -1);
