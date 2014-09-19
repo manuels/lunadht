@@ -6,6 +6,7 @@
 #include <gio/gio.h>
 
 #include "ipc.h"
+#include "safe_assert.h"
 #include "network-bindings.h"
 
 static int sock;
@@ -104,7 +105,7 @@ on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 
 	flags = MSG_WAITALL;
 	len = recv(sock, &msg, sizeof(msg), flags);
-	g_assert(len == sizeof(msg));
+	safe_assert(len == sizeof(msg));
 
 	switch(msg.type) {
 	case JOINED:
@@ -119,11 +120,11 @@ on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 		length = malloc((msg.result.length)*sizeof(int));
 		for (i = 0; i < msg.result.length; ++i) {
 			len = recv(sock, &size, sizeof(size), flags);
-			g_assert(len == sizeof(size));
+			safe_assert(len == sizeof(size));
 
 			buf = malloc(size);
 			len = recv(sock, buf, size, flags);
-			g_assert(len == size);
+			safe_assert(len == size);
 
 			results[i] = buf;
 			length[i] = len;
@@ -146,7 +147,7 @@ on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 		id = malloc(msg.node_id.length);
 
 		len = recv(sock, id, msg.node_id.length, 0);
-		g_assert(len == msg.node_id.length);
+		safe_assert(len == msg.node_id.length);
 
 		save_node_id(id, len);
 
@@ -159,14 +160,14 @@ on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 		node_list = malloc((msg.node_list.length+1)*sizeof(struct node));
 		for (i = 0; i < msg.result.length; ++i) {
 			len = recv(sock, &size, sizeof(size), flags);
-			g_assert(len == sizeof(size));
+			safe_assert(len == sizeof(size));
 
 			buf = malloc(size);
 			len = recv(sock, buf, size, flags);
-			g_assert(len == size);
+			safe_assert(len == size);
 
 			len = recv(sock, &(node_list[i].port), sizeof(node_list[i].port), flags);
-			g_assert(len == sizeof(node_list[i].port));
+			safe_assert(len == sizeof(node_list[i].port));
 
 			node_list[i].host = buf;
 		}
@@ -179,7 +180,7 @@ on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 		break;
 
 	default:
-		g_assert_not_reached();
+		safe_assert("should not be reached " && (0==1));
 	}
 
 	return TRUE;
@@ -198,10 +199,10 @@ static gboolean on_dbus_join(OrgManuelLunaDHT *object,
 	msg.join.port = port;
 
 	len = send(sock, &msg, sizeof(msg), 0);
-	g_assert(len == sizeof(msg));
+	safe_assert(len == sizeof(msg));
 
 	len = send(sock, host, strlen(host)+1, 0);
-	g_assert(len == strlen(host)+1);
+	safe_assert(len == strlen(host)+1);
 
 	if((object != NULL) && (invocation != NULL))
 		org_manuel_luna_dht_complete_join(object, invocation);
@@ -227,10 +228,10 @@ static gboolean on_dbus_get(OrgManuelLunaDHT *object,
 	msg.get.user_data = invocation;
 
 	len = send(sock, &msg, sizeof(msg), 0);
-	g_assert(len == sizeof(msg));
+	safe_assert(len == sizeof(msg));
 
 	len = send(sock, key, msg.get.keylen, 0);
-	g_assert(len == msg.get.keylen);
+	safe_assert(len == msg.get.keylen);
 
 	return TRUE;
 }
@@ -259,14 +260,14 @@ static gboolean on_dbus_put(OrgManuelLunaDHT *object,
 	msg.put.ttl = ttl;
 
 	len = send(sock, &msg, sizeof(msg), 0);
-	g_assert(len == sizeof(msg));
+	safe_assert(len == sizeof(msg));
 
 	g_debug("dbus put: len=%lu", keylen);
 	len = send(sock, key, msg.put.keylen, 0);
-	g_assert(len == msg.put.keylen);
+	safe_assert(len == msg.put.keylen);
 
 	len = send(sock, value, msg.put.valuelen, 0);
-	g_assert(len == msg.put.valuelen);
+	safe_assert(len == msg.put.valuelen);
 
 	org_manuel_luna_dht_complete_put(object, invocation);
 
@@ -351,10 +352,10 @@ load_node_id(const char *id, unsigned long len) {
 	msg.node_id.length = len;
 
 	length = send(sock, &msg, sizeof(msg), 0);
-	g_assert(length == sizeof(msg));
+	safe_assert(length == sizeof(msg));
 
 	length = send(sock, id, msg.node_id.length, 0);
-	g_assert(length == sizeof(msg));
+	safe_assert(length == sizeof(msg));
 
 out:
 	g_variant_unref(val);

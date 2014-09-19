@@ -4,6 +4,10 @@
 #include "libcage/src/cage.hpp"
 #include "ipc.h"
 
+extern "C" {
+#include "safe_assert.h"
+}
+
 #ifndef MAX
 #define MAX(a,b) a>b ? a : b
 #endif
@@ -19,7 +23,7 @@ on_joined(bool res) {
 	msg.joined.result = res;
 
 	len = send(sock, &msg, sizeof(msg), 0);
-	assert(len == sizeof(msg));
+	safe_assert(len == sizeof(msg));
 }
 
 class get_callback
@@ -39,7 +43,7 @@ public:
 		msg.result.length = vset ? vset->size() : 0;
 
 		len = send(sock, &msg, sizeof(msg), 0);
-		assert(len == sizeof(msg));
+		safe_assert(len == sizeof(msg));
 
 		if (!result)
 			return;
@@ -48,10 +52,10 @@ public:
 			buf = val.value.get();
 
 			len = send(sock, &val.len, sizeof(val.len), 0);
-			assert(len == sizeof(val.len));
+			safe_assert(len == sizeof(val.len));
 
 			len = send(sock, buf, val.len, 0);
-			assert(len == val.len);
+			safe_assert(len == val.len);
 		}
 	}
 };
@@ -103,7 +107,7 @@ send_node_list(std::list<libcage::cageaddr> const nodes) {
 	msg.node_list.length = nodes.size();
 
 	len = send(sock, &msg, sizeof(msg), 0);
-	assert(len == sizeof(msg));
+	safe_assert(len == sizeof(msg));
 
 	for (it = nodes.begin(); it != nodes.end(); it++) {
 		if (it->domain == PF_INET6) {
@@ -117,18 +121,18 @@ send_node_list(std::list<libcage::cageaddr> const nodes) {
 			port = ntohs(in4->sin_port);
 		}
 		else
-			assert(0==1 && "unknown addr domain");
-		assert(res != NULL);
+			safe_assert(0==1 && "unknown addr domain");
+		safe_assert(res != NULL);
 
 		len = send(sock, &port, sizeof(port), 0);
-		assert(len == sizeof(port));
+		safe_assert(len == sizeof(port));
 
 		length = strlen(host)+1;
 		len = send(sock, &length, sizeof(length), 0);
-		assert(len == sizeof(length));
+		safe_assert(len == sizeof(length));
 
 		len = send(sock, host, length, 0);
-		assert(len == length);
+		safe_assert(len == length);
 	}
 }
 
@@ -146,7 +150,7 @@ on_ipc(int fd, short ev_type, void *user_data) {
         std::list<libcage::cageaddr> nodes;
 
 	len = recv(fd, &msg, sizeof(msg), flags);
-	assert(len == sizeof(msg));
+	safe_assert(len == sizeof(msg));
 
 	switch(msg.type) {
 	case JOIN:
@@ -161,7 +165,7 @@ on_ipc(int fd, short ev_type, void *user_data) {
 		key = (char *) malloc(msg.get.keylen);
 
 		len = recv(fd, key, msg.get.keylen, flags);
-		assert(len == msg.get.keylen);
+		safe_assert(len == msg.get.keylen);
 
 		get(cage, msg.get.app_id, key, msg.get.keylen, msg.get.user_data);
 		free(key);
@@ -172,10 +176,10 @@ on_ipc(int fd, short ev_type, void *user_data) {
 		value = (char *) malloc(msg.put.valuelen);
 
 		len = recv(fd, key, msg.put.keylen, flags);
-		assert(len == msg.put.keylen);
+		safe_assert(len == msg.put.keylen);
 
 		len = recv(fd, value, msg.put.valuelen, flags);
-		assert(len == msg.put.valuelen);
+		safe_assert(len == msg.put.valuelen);
 
 		put(cage, msg.put.app_id, key, msg.put.keylen, value, msg.put.valuelen, msg.put.ttl);
 		free(key);
@@ -193,17 +197,17 @@ on_ipc(int fd, short ev_type, void *user_data) {
 		msg.node_id.length = strlen(id);
 
 		len = send(sock, &msg, sizeof(msg), 0);
-		assert(len == sizeof(msg));
+		safe_assert(len == sizeof(msg));
 
 		len = send(sock, id, msg.node_id.length, 0);
-		assert(len == msg.node_id.length);
+		safe_assert(len == msg.node_id.length);
 		break;
 
 	case SET_NODE_ID:
 		id = (char *) malloc(msg.node_id.length);
 
 		len = recv(sock, id, msg.node_id.length, 0);
-		assert(len == msg.node_id.length);
+		safe_assert(len == msg.node_id.length);
 
 		str = std::string(id, len);
 		cage->set_id_str(str);
@@ -214,7 +218,7 @@ on_ipc(int fd, short ev_type, void *user_data) {
 		break;
 
 	default:
-		assert("should not be reached" && (1!=1));
+		safe_assert("should not be reached" && (1!=1));
 	}
 }
 

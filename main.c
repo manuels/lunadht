@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	res = socketpair(AF_LOCAL, SOCK_STREAM, 0, sock);
-	assert(res > -1);
+	safe_assert(res > -1);
 
 	pid = fork();
 	if (pid == 0)

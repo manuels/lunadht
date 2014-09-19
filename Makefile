@@ -13,8 +13,9 @@ all:
 	gcc -g -c -Wall `pkg-config --cflags glib-2.0` dbus.c
 	g++ -g -c -Wall `pkg-config --cflags libevent` -I /usr/include dht.cpp
 	gcc -g -c -Wall main.c
+	gcc -g -c -Wall safe_assert.c
 
 	g++ -g -Wall -o lunadhtd \
-		network-bindings.o dbus.o dht.o main.o \
+		network-bindings.o dbus.o dht.o main.o safe_assert.o \
 		libcage/src/*.o \
 		`pkg-config --libs openssl glib-2.0 gio-2.0 gio-unix-2.0 libevent`
