@@ -1,4 +1,6 @@
 #include <assert.h>
+#include <stdlib.h>
+
 #include "safe_assert.h"
 
 void

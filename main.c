@@ -8,6 +8,8 @@
 #include <assert.h>
 #include <sys/wait.h>
 
+#include "safe_assert.h"
+
 int run_dbus(int socket, char *dbus_name);
 int run_dht(int socket, int port);
 
