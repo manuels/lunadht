@@ -13,7 +13,7 @@ extern int sock;
 GSettings *settings = NULL;
 
 void
-save_node_list(struct node *nodes, int len) {
+settings_save_nodes(struct node *nodes, int len) {
 	if (settings == NULL)
 		return;
 
@@ -37,8 +37,32 @@ save_node_list(struct node *nodes, int len) {
 	g_variant_builder_unref(builder);
 }
 
+int
+settings_load_nodes() {
+	if (settings == NULL)
+		return -1;
+
+	GVariant *nodes;
+	char *host = NULL;
+	guint16 port;
+	int i;
+
+	settings = g_settings_new_with_path("org.manuel.LunaDHT", ".");
+
+	nodes = g_settings_get_value(settings, "nodes");
+
+	for (i = 0; i < g_variant_n_children(nodes); ++i) {
+		g_variant_get_child(nodes, i, "(&sq)", host, &port);
+		//on_dbus_join(NULL, NULL, host, port); TODO
+	}
+
+	g_variant_unref(nodes);
+
+	return 0;
+}
+
 void
-save_node_id(char *id, int len) {
+settings_save_node_id(char *id, int len) {
 	if (settings == NULL)
 		return;
 
@@ -51,7 +75,7 @@ save_node_id(char *id, int len) {
 
 
 void
-load_node_id(const char *id, unsigned long len) {
+settings_load_node_id(const char *id, unsigned long len) {
 	if (settings == NULL)
 		return;
 
@@ -78,25 +102,3 @@ out:
 	g_variant_unref(val);
 }
 
-int load_nodes() {
-	if (settings == NULL)
-		return -1;
-
-	GVariant *nodes;
-	char *host = NULL;
-	guint16 port;
-	int i;
-
-	settings = g_settings_new_with_path("org.manuel.LunaDHT", ".");
-
-	nodes = g_settings_get_value(settings, "nodes");
-
-	for (i = 0; i < g_variant_n_children(nodes); ++i) {
-		g_variant_get_child(nodes, i, "(&sq)", host, &port);
-		//on_dbus_join(NULL, NULL, host, port); TODO
-	}
-
-	g_variant_unref(nodes);
-
-	return 0;
-}

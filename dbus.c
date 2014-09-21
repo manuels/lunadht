@@ -75,7 +75,7 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 		len = recv(sock, id, msg.node_id.length, 0);
 		safe_assert(len == msg.node_id.length);
 
-		save_node_id(id, len);
+		settings_save_node_id(id, len);
 
 		free(id);
 		break;
@@ -98,7 +98,7 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 			node_list[i].host = buf;
 		}
 
-		save_node_list(node_list, msg.result.length);
+		settings_save_nodes(node_list, msg.result.length);
 		// TODO: free(node_list[:]);
 		free(node_list);
 
@@ -258,7 +258,7 @@ int dbus_run(int socket, char *dbus_name) {
 	g_bus_own_name(G_BUS_TYPE_SESSION, dbus_name, flags,
 	        NULL, dbus_on_name_acquired, NULL, NULL, NULL);
 
-	load_nodes();
+	settings_load_nodes();
 
 	g_main_loop_run(main_loop);
 
