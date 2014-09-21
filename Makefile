@@ -1,5 +1,5 @@
 all:
-	gdbus-codegen --interface-prefix=luna \
+	gdbus-codegen --interface-prefix=org.manuel \
 		--annotate "org.manuel.LunaDHT.get()[key]" org.gtk.GDBus.C.ForceGVariant true \
 		--annotate "org.manuel.LunaDHT.get()[results]" org.gtk.GDBus.C.ForceGVariant true \
 		--annotate "org.manuel.LunaDHT.put()[key]" org.gtk.GDBus.C.ForceGVariant true \
