@@ -14,7 +14,7 @@ int sock;
 static GMainLoop *main_loop;
 
 static gboolean
-on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
+dbus_on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 {
 	GDBusMethodInvocation *invocation;
 	LunaDHT *dht;
@@ -116,7 +116,7 @@ on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 }
 
 static gboolean
-on_dbus_join(LunaDHT *dht,
+dbus_on_join(LunaDHT *dht,
     GDBusMethodInvocation *invocation,
     const gchar *host,
     const guint16 port)
@@ -141,7 +141,7 @@ on_dbus_join(LunaDHT *dht,
 }
 
 static gboolean
-on_dbus_get(LunaDHT *dht,
+dbus_on_get(LunaDHT *dht,
     GDBusMethodInvocation *invocation,
     guint app_id,
     GVariant *arg_key)
@@ -168,7 +168,7 @@ on_dbus_get(LunaDHT *dht,
 }
 
 static gboolean
-on_dbus_put(LunaDHT *dht,
+dbus_on_put(LunaDHT *dht,
     GDBusMethodInvocation *invocation,
     guint app_id,
     GVariant *arg_key,
@@ -207,7 +207,7 @@ on_dbus_put(LunaDHT *dht,
 }
 
 static void
-on_service_name_acquired(GDBusConnection *dbus_conn,
+dbus_on_name_acquired(GDBusConnection *dbus_conn,
 	                     const gchar *name,
 	                     gpointer user_data) {
 	LunaDHT *dht;
@@ -219,19 +219,19 @@ on_service_name_acquired(GDBusConnection *dbus_conn,
 	g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(dht),
 	        dbus_conn, path, NULL);
 
-	g_signal_connect(dht, "handle_put", G_CALLBACK(on_dbus_put), dbus_conn);
-	g_signal_connect(dht, "handle_get", G_CALLBACK(on_dbus_get), dbus_conn);
-	g_signal_connect(dht, "handle_join", G_CALLBACK(on_dbus_join), dbus_conn);
+	g_signal_connect(dht, "handle_put", G_CALLBACK(dbus_on_put), dbus_conn);
+	g_signal_connect(dht, "handle_get", G_CALLBACK(dbus_on_get), dbus_conn);
+	g_signal_connect(dht, "handle_join", G_CALLBACK(dbus_on_join), dbus_conn);
 
 	g_object_set(dht, "joined", FALSE, NULL);
 
 	/* setup ipc */
 	GIOChannel *ch = g_io_channel_unix_new(sock);
-	g_io_add_watch(ch, G_IO_IN, on_ipc, dht);
+	g_io_add_watch(ch, G_IO_IN, dbus_on_ipc, dht);
 }
 
 void
-sig_abort() {
+dbus_on_sig_abort() {
 	if(settings == NULL)
 		return;
 
@@ -243,9 +243,9 @@ sig_abort() {
 	g_main_loop_quit(main_loop);
 }
 
-int run_dbus(int socket, char *dbus_name) {
+int dbus_run(int socket, char *dbus_name) {
 	g_type_init();
-	signal(SIGABRT, sig_abort);
+	signal(SIGABRT, dbus_on_sig_abort);
 
 	int flags = G_BUS_NAME_OWNER_FLAGS_ALLOW_REPLACEMENT |
 	        G_BUS_NAME_OWNER_FLAGS_REPLACE;
@@ -256,7 +256,7 @@ int run_dbus(int socket, char *dbus_name) {
 	/* setup dbus */
 	g_debug("Acquiring DBus name '%s'...", dbus_name);
 	g_bus_own_name(G_BUS_TYPE_SESSION, dbus_name, flags,
-	        NULL, on_service_name_acquired, NULL, NULL, NULL);
+	        NULL, dbus_on_name_acquired, NULL, NULL, NULL);
 
 	load_nodes();
 
