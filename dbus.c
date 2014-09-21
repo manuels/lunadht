@@ -18,35 +18,6 @@ struct node {
 	guint16 port;
 };
 
-static void
-present_results(LunaDHT *object,
-	GDBusMethodInvocation *invocation,
-	char **results,
-	int *length)
-{
-	GVariantBuilder *builder;
-	GVariant *res;
-	GVariant *var;
-	int i;
-
-	builder = g_variant_builder_new(G_VARIANT_TYPE_BYTESTRING_ARRAY);
-
-	i = 0;
-	while(*results) {
-		var = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, *results, length[i], sizeof(char));
-		g_debug("g_variant_new_fixed_array type=%s", g_variant_get_type_string(var));
-		g_variant_builder_add_value(builder, var);
-
-		i++;
-		results++;
-	}
-	res = g_variant_builder_end(builder);
-
-	luna_dht_complete_get(object, invocation, res);
-
-	g_variant_builder_unref(builder);
-}
-
 void
 save_node_list(struct node *nodes, int len) {
 	if (settings == NULL)
@@ -87,29 +58,29 @@ save_node_id(char *id, int len) {
 static gboolean
 on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 {
-	LunaDHT *skeleton;
 	GDBusMethodInvocation *invocation;
+	LunaDHT *dht;
+	GVariant *res;
 	struct ipc_message msg;
 	char *buf;
 	char **results;
 	struct node *node_list;
 	int *length;
 	char *id;
-	int len;
 	int size;
+	int flags = MSG_WAITALL;
+	int len;
 	int i;
-	int flags;
 
-	skeleton = LUNA_DHT(user_data);
+	dht = LUNA_DHT(user_data);
 
-	flags = MSG_WAITALL;
 	len = recv(sock, &msg, sizeof(msg), flags);
 	safe_assert(len == sizeof(msg));
 
 	switch(msg.type) {
 	case JOINED:
 		g_debug("joined = %i\n", msg.joined.result);
-		g_object_set(skeleton, "joined", msg.joined.result, NULL);
+		g_object_set(dht, "joined", msg.joined.result, NULL);
 		break;
 
 	case RESULT:
@@ -117,6 +88,7 @@ on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 
 		results = malloc((msg.result.length+1)*sizeof(char *));
 		length = malloc((msg.result.length)*sizeof(int));
+
 		for (i = 0; i < msg.result.length; ++i) {
 			len = recv(sock, &size, sizeof(size), flags);
 			safe_assert(len == sizeof(size));
@@ -131,15 +103,14 @@ on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 		results[i] = NULL;
 
 		invocation = (GDBusMethodInvocation *) msg.result.user_data;
-		present_results(skeleton, invocation, results, length);
+		res = g_variant_new_bytestring_array((const gchar * const *) results, -1);
+		luna_dht_complete_get(dht, invocation, res);
 
-		/*
 		for (i = 0; i < msg.result.length; ++i)
 			free(results[i]);
 
 		free(results);
 		free(length);
-		*/
 		break;
 
 	case GET_NODE_ID:
@@ -172,9 +143,12 @@ on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 		}
 
 		save_node_list(node_list, msg.result.length);
+		// TODO: free(node_list[:]);
+		free(node_list);
 
 		msg.type = QUIT;
 		send(sock, &msg, sizeof(msg), 0);
+
 		g_main_quit(main_loop);
 		break;
 
@@ -185,7 +159,8 @@ on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 	return TRUE;
 }
 
-static gboolean on_dbus_join(LunaDHT *object,
+static gboolean
+on_dbus_join(LunaDHT *dht,
     GDBusMethodInvocation *invocation,
     const gchar *host,
     const guint16 port)
@@ -203,21 +178,22 @@ static gboolean on_dbus_join(LunaDHT *object,
 	len = send(sock, host, strlen(host)+1, 0);
 	safe_assert(len == strlen(host)+1);
 
-	if((object != NULL) && (invocation != NULL))
-		luna_dht_complete_join(object, invocation);
+	if (dht && invocation)
+		luna_dht_complete_join(dht, invocation);
 
 	return TRUE;
 }
 
-static gboolean on_dbus_get(LunaDHT *object,
+static gboolean
+on_dbus_get(LunaDHT *dht,
     GDBusMethodInvocation *invocation,
     guint app_id,
     GVariant *arg_key)
 {
-	int len;
 	struct ipc_message msg;
 	const char *key;
 	gsize keylen;
+	int len;
 
 	key = g_variant_get_fixed_array(arg_key, &keylen, sizeof(char));
 
@@ -235,19 +211,20 @@ static gboolean on_dbus_get(LunaDHT *object,
 	return TRUE;
 }
 
-static gboolean on_dbus_put(LunaDHT *object,
+static gboolean
+on_dbus_put(LunaDHT *dht,
     GDBusMethodInvocation *invocation,
     guint app_id,
     GVariant *arg_key,
     GVariant *arg_value,
     guint64 ttl)
 {
-	int len;
 	struct ipc_message msg;
 	const char *key;
 	const char *value;
 	gsize keylen;
 	gsize valuelen;
+	int len;
 
 	key = g_variant_get_fixed_array(arg_key, &keylen, sizeof(char));
 	value = g_variant_get_fixed_array(arg_value, &valuelen, sizeof(char));
@@ -268,7 +245,7 @@ static gboolean on_dbus_put(LunaDHT *object,
 	len = send(sock, value, msg.put.valuelen, 0);
 	safe_assert(len == msg.put.valuelen);
 
-	luna_dht_complete_put(object, invocation);
+	luna_dht_complete_put(dht, invocation);
 
 	return TRUE;
 }
@@ -277,24 +254,24 @@ static void
 on_service_name_acquired(GDBusConnection *dbus_conn,
 	                     const gchar *name,
 	                     gpointer user_data) {
-	LunaDHT *skeleton;
+	LunaDHT *dht;
 	char path[] = "/org/manuel/LunaDHT";
 	
 	g_debug("DBus name aquired.");
 
-	skeleton = luna_dht_skeleton_new();
-	g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(skeleton),
+	dht = luna_dht_skeleton_new();
+	g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(dht),
 	        dbus_conn, path, NULL);
 
-	g_signal_connect(skeleton, "handle_put", G_CALLBACK(on_dbus_put), dbus_conn);
-	g_signal_connect(skeleton, "handle_get", G_CALLBACK(on_dbus_get), dbus_conn);
-	g_signal_connect(skeleton, "handle_join", G_CALLBACK(on_dbus_join), dbus_conn);
+	g_signal_connect(dht, "handle_put", G_CALLBACK(on_dbus_put), dbus_conn);
+	g_signal_connect(dht, "handle_get", G_CALLBACK(on_dbus_get), dbus_conn);
+	g_signal_connect(dht, "handle_join", G_CALLBACK(on_dbus_join), dbus_conn);
 
-	g_object_set(skeleton, "joined", FALSE, NULL);
+	g_object_set(dht, "joined", FALSE, NULL);
 
 	/* setup ipc */
 	GIOChannel *ch = g_io_channel_unix_new(sock);
-	g_io_add_watch(ch, G_IO_IN, on_ipc, skeleton);
+	g_io_add_watch(ch, G_IO_IN, on_ipc, dht);
 }
 
 int load_nodes() {
@@ -315,6 +292,8 @@ int load_nodes() {
 		on_dbus_join(NULL, NULL, host, port);
 	}
 
+	g_variant_unref(nodes);
+
 	return 0;
 }
 
@@ -325,8 +304,10 @@ sig_abort() {
 
 	struct ipc_message msg;
 
-	msg.type = NODE_LIST;
+	msg.type = QUIT;
 	send(sock, &msg, sizeof(msg), 0);
+
+	g_main_loop_quit(main_loop);
 }
 
 void
@@ -334,9 +315,9 @@ load_node_id(const char *id, unsigned long len) {
 	if (settings == NULL)
 		return;
 
-	struct ipc_message msg;
-	GVariant *val;
 	int length;
+	GVariant *val;
+	struct ipc_message msg;
 
 	val = g_settings_get_value(settings, "id");
 	id = g_variant_get_fixed_array(val, &len, sizeof(char));
@@ -351,7 +332,7 @@ load_node_id(const char *id, unsigned long len) {
 	safe_assert(length == sizeof(msg));
 
 	length = send(sock, id, msg.node_id.length, 0);
-	safe_assert(length == sizeof(msg));
+	safe_assert(length == msg.node_id.length);
 
 out:
 	g_variant_unref(val);
@@ -361,21 +342,16 @@ int run_dbus(int socket, char *dbus_name) {
 	g_type_init();
 	signal(SIGABRT, sig_abort);
 
+	int flags = G_BUS_NAME_OWNER_FLAGS_ALLOW_REPLACEMENT |
+	        G_BUS_NAME_OWNER_FLAGS_REPLACE;
+
 	sock = socket;
 	main_loop = g_main_loop_new(NULL, TRUE);
 
 	/* setup dbus */
-	g_debug("Acquiring DBus name...");
-	g_bus_own_name(
-	        G_BUS_TYPE_SESSION,
-	        dbus_name,
-	        G_BUS_NAME_OWNER_FLAGS_ALLOW_REPLACEMENT |
-	        G_BUS_NAME_OWNER_FLAGS_REPLACE,
-	        NULL,
-	        on_service_name_acquired,
-	        NULL,
-	        NULL,
-	        NULL);
+	g_debug("Acquiring DBus name '%s'...", dbus_name);
+	g_bus_own_name(G_BUS_TYPE_SESSION, dbus_name, flags,
+	        NULL, on_service_name_acquired, NULL, NULL, NULL);
 
 	load_nodes();
 
