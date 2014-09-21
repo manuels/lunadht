@@ -106,10 +106,7 @@ on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 		res = g_variant_new_bytestring_array((const gchar * const *) results, -1);
 		luna_dht_complete_get(dht, invocation, res);
 
-		for (i = 0; i < msg.result.length; ++i)
-			free(results[i]);
-
-		free(results);
+		g_strfreev(results);
 		free(length);
 		break;
 
