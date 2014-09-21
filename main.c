@@ -11,7 +11,7 @@
 #include "safe_assert.h"
 
 int dbus_run(int socket, char *dbus_name);
-int run_dht(int socket, int port);
+int dht_run(int socket, int port);
 
 int main(int argc, char *argv[]) {
 	int port = 7786;
@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
 
 	pid = fork();
 	if (pid == 0)
-		run_dht(sock[0], port);
+		dht_run(sock[0], port);
 	else
 		dbus_run(sock[1], dbus_name);
 
