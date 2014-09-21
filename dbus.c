@@ -45,7 +45,6 @@ present_results(OrgManuelLunaDHT *object,
 	org_manuel_luna_dht_complete_get(object, invocation, res);
 
 	g_variant_builder_unref(builder);
-//		g_variant_unref(res);
 }
 
 void

@@ -33,10 +33,10 @@ public:
 	unsigned int m_app_id;
 
 	void operator() (bool result, libcage::dht::value_set_ptr vset) {
-		libcage::dht::value_set::const_iterator it;
 		struct ipc_message msg;
 		int len;
 		char *buf;
+		libcage::dht::value_set::const_iterator it;
 
 		msg.type = RESULT;
 		msg.result.user_data = this->m_user_data;
@@ -45,13 +45,13 @@ public:
 		len = send(sock, &msg, sizeof(msg), 0);
 		safe_assert(len == sizeof(msg));
 
-		if (!result)
+		if (msg.result.length == 0)
 			return;
 
 		BOOST_FOREACH(const libcage::dht::value_t &val, *vset) {
 			buf = val.value.get();
 
-			len = send(sock, &val.len, sizeof(val.len), 0);
+			len = send(sock, &(val.len), sizeof(val.len), 0);
 			safe_assert(len == sizeof(val.len));
 
 			len = send(sock, buf, val.len, 0);
@@ -61,19 +61,23 @@ public:
 };
 
 static void
-get(libcage::cage *cage, unsigned int app_id, char *key, int keylen, void *user_data)
+get(libcage::cage *cage, unsigned int app_id, char *key, int keylen,
+	void *user_data)
 {
 	int len;
 	unsigned int *buf;
+	get_callback on_get_finished;
 
+	/* construct lookup key */
 	len = sizeof(app_id) + keylen;
 	buf = (unsigned int *) malloc(len);
-	buf[0] = app_id;
+	buf[0] = htonl(app_id);
 	memcpy(&(buf[1]), key, keylen);
 
-	get_callback on_get_finished;
 	on_get_finished.m_user_data = user_data;
 	cage->get(buf, len, on_get_finished);
+
+	free(buf);
 }
 
 static void
@@ -83,25 +87,28 @@ put(libcage::cage *cage, unsigned int app_id, char *key, int keylen,
 	int len;
 	unsigned int *buf;
 
+	/* construct lookup key */
 	len = sizeof(app_id) + keylen;
 	buf = (unsigned int *) malloc(len);
-	buf[0] = app_id;
-	memcpy(&buf[1], key, keylen);
+	buf[0] = htonl(app_id);
+	memcpy(&(buf[1]), key, keylen);
 
 	cage->put(buf, len, value, valuelen, ttl);
+	free(buf);
 }
 
 static void
 send_node_list(std::list<libcage::cageaddr> const nodes) {
-	char host[MAX(INET6_ADDRSTRLEN, INET_ADDRSTRLEN)];
+	unsigned int max_host_len = MAX(INET6_ADDRSTRLEN, INET_ADDRSTRLEN);
+	char host[max_host_len];
 	std::list<libcage::cageaddr>::const_iterator it;
 	struct ipc_message msg;
 	unsigned short port;
-	int len;
-	int length;
-	const char *res;
 	libcage::in6_ptr in6;
 	libcage::in_ptr in4;
+	const char *res;
+	int length;
+	int len;
 
 	msg.type = NODE_LIST;
 	msg.node_list.length = nodes.size();
@@ -137,34 +144,36 @@ send_node_list(std::list<libcage::cageaddr> const nodes) {
 }
 
 static void
-on_ipc(int fd, short ev_type, void *user_data) {
+on_ipc(int fd, short ev_type, void *user_data)
+{
+	libcage::cage *cage = (libcage::cage *) user_data;
+	std::list<libcage::cageaddr> nodes;
+	struct ipc_message msg;
+	std::string str;
 	ssize_t len;
 	char *key;
 	char *host;
 	char *value;
 	char *id;
-	std::string str;
-	struct ipc_message msg;
-	int flags = MSG_WAITALL;
-	libcage::cage *cage = (libcage::cage *) user_data;
-        std::list<libcage::cageaddr> nodes;
 
-	len = recv(fd, &msg, sizeof(msg), flags);
+	len = recv(fd, &msg, sizeof(msg), MSG_WAITALL);
 	safe_assert(len == sizeof(msg));
 
 	switch(msg.type) {
 	case JOIN:
 		// TODO: timer that retries to join every 60 sec if not connected.
 		host = (char *) malloc(msg.join.hostlen);
-		len = recv(fd, host, msg.join.hostlen, flags);
+		len = recv(fd, host, msg.join.hostlen, MSG_WAITALL);
 
 		cage->join(host, msg.join.port, on_joined);
+
+		free(host);
 		break;
 
 	case GET:
 		key = (char *) malloc(msg.get.keylen);
 
-		len = recv(fd, key, msg.get.keylen, flags);
+		len = recv(fd, key, msg.get.keylen, MSG_WAITALL);
 		safe_assert(len == msg.get.keylen);
 
 		get(cage, msg.get.app_id, key, msg.get.keylen, msg.get.user_data);
@@ -175,13 +184,15 @@ on_ipc(int fd, short ev_type, void *user_data) {
 		key = (char *) malloc(msg.put.keylen);
 		value = (char *) malloc(msg.put.valuelen);
 
-		len = recv(fd, key, msg.put.keylen, flags);
+		len = recv(fd, key, msg.put.keylen, MSG_WAITALL);
 		safe_assert(len == msg.put.keylen);
 
-		len = recv(fd, value, msg.put.valuelen, flags);
+		len = recv(fd, value, msg.put.valuelen, MSG_WAITALL);
 		safe_assert(len == msg.put.valuelen);
 
-		put(cage, msg.put.app_id, key, msg.put.keylen, value, msg.put.valuelen, msg.put.ttl);
+		put(cage, msg.put.app_id,key, msg.put.keylen, value, msg.put.valuelen,
+			msg.put.ttl);
+
 		free(key);
 		free(value);
 		break;
@@ -189,12 +200,13 @@ on_ipc(int fd, short ev_type, void *user_data) {
 	case NODE_LIST:
 		nodes = cage->get_table();
 		send_node_list(nodes);
+		// TODO: free nodes?
 		break;
 
 	case GET_NODE_ID:
 		id = (char *) cage->get_id_str().c_str();
 		msg.type = GET_NODE_ID;
-		msg.node_id.length = strlen(id);
+		msg.node_id.length = strlen(id)+1;
 
 		len = send(sock, &msg, sizeof(msg), 0);
 		safe_assert(len == sizeof(msg));
@@ -206,13 +218,14 @@ on_ipc(int fd, short ev_type, void *user_data) {
 	case SET_NODE_ID:
 		id = (char *) malloc(msg.node_id.length);
 
-		len = recv(sock, id, msg.node_id.length, 0);
+		len = recv(sock, id, msg.node_id.length, MSG_WAITALL);
 		safe_assert(len == msg.node_id.length);
 
 		str = std::string(id, len);
 		cage->set_id_str(str);
 
 		free(id);
+
 	case QUIT:
 		event_loopbreak();
 		break;
