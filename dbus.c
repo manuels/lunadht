@@ -97,6 +97,7 @@ on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 			len = recv(sock, buf, size, flags);
 			safe_assert(len == size);
 
+			buf[len] = '\0';
 			results[i] = buf;
 			length[i] = len;
 		}
