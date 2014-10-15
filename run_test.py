@@ -31,15 +31,15 @@ def main():
 	dht.join("::1", 7786, dbus_interface='org.manuel.LunaDHT')
 
 	for i in range(5):
-		dht.put(0xDEAD, "foo\0", "bar\0", 60*60,
+		dht.put(0xDEAD, "\0foo\0", "\0bar\0", 60*60,
 			dbus_interface='org.manuel.LunaDHT')
 		time.sleep(1)
 
-		res = dht.get(0xDEAD, "foo\0",
+		res = dht.get(0xDEAD, "\0foo\0",
 			dbus_interface='org.manuel.LunaDHT')
 		if len(res) > 0:
 			actual_result = ''.join([chr(x) for x in res[0]])
-			expected_result = "bar\0"
+			expected_result = "\0bar\0"
 
 			if actual_result == expected_result:
 				print 'Test suceeded.'

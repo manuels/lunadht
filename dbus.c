@@ -21,9 +21,8 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 	GVariant *res;
 	struct ipc_message msg;
 	char *buf;
-	char **results;
+	GVariant **results;
 	struct node *node_list;
-	int *length;
 	char *id;
 	int size;
 	int flags = MSG_WAITALL;
@@ -44,8 +43,7 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 	case RESULT:
 		g_debug("result len=%i!\n", msg.result.length);
 
-		results = malloc((msg.result.length+1)*sizeof(char *));
-		length = malloc((msg.result.length)*sizeof(int));
+		results = malloc((msg.result.length)*sizeof(GVariant *));
 
 		for (i = 0; i < msg.result.length; ++i) {
 			len = recv(sock, &size, sizeof(size), flags);
@@ -55,18 +53,18 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 			len = recv(sock, buf, size, flags);
 			safe_assert(len == size);
 
-			buf[len] = '\0';
-			results[i] = buf;
-			length[i] = len;
+			//buf[len] = '\0';
+			results[i] = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,
+				buf, len, sizeof(char));
+
+			//free(buf);
 		}
-		results[i] = NULL;
 
 		invocation = (GDBusMethodInvocation *) msg.result.user_data;
-		res = g_variant_new_bytestring_array((const gchar * const *) results, -1);
+		res = g_variant_new_array(G_VARIANT_TYPE_BYTESTRING,
+			results, msg.result.length);
 		luna_dht_complete_get(dht, invocation, res);
 
-		g_strfreev(results);
-		free(length);
 		break;
 
 	case GET_NODE_ID:
@@ -191,10 +189,10 @@ dbus_on_put(LunaDHT *dht,
 	msg.put.valuelen = valuelen;
 	msg.put.ttl = ttl;
 
+	g_debug("dht-dbus put: keylen=%lu vallen=%lu", keylen, valuelen);
 	len = send(sock, &msg, sizeof(msg), 0);
 	safe_assert(len == sizeof(msg));
 
-	g_debug("dbus put: len=%lu", keylen);
 	len = send(sock, key, msg.put.keylen, 0);
 	safe_assert(len == msg.put.keylen);
 
