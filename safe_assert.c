@@ -6,7 +6,7 @@
 void
 safe_assert(int cond) {
 	assert(cond);
-	if (!cond) {
-		exit(-1);
+	if (cond == 0) {
+		exit(EXIT_FAILURE);
 	}
 }
