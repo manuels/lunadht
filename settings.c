@@ -1,6 +1,7 @@
 #include <sys/socket.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include <glib.h>
 #include <gio/gio.h>
@@ -13,7 +14,7 @@ extern int sock;
 GSettings *settings = NULL;
 
 void
-settings_save_nodes(struct node *nodes, int len) {
+settings_save_nodes(struct node *nodes, size_t len) {
 	if (settings == NULL)
 		return;
 
@@ -62,7 +63,7 @@ settings_load_nodes() {
 }
 
 void
-settings_save_node_id(char *id, int len) {
+settings_save_node_id(char *id, size_t len) {
 	if (settings == NULL)
 		return;
 
@@ -75,13 +76,13 @@ settings_save_node_id(char *id, int len) {
 
 
 void
-settings_load_node_id(const char *id, unsigned long len) {
+settings_load_node_id(const char *id, size_t len) {
 	if (settings == NULL)
 		return;
 
 	int length;
 	GVariant *val;
-	struct ipc_message msg;
+	struct ipc_message msg = {};
 
 	val = g_settings_get_value(settings, "id");
 	id = g_variant_get_fixed_array(val, &len, sizeof(char));

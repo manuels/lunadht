@@ -17,13 +17,13 @@ static int sock;
 static void
 dht_on_joined(bool res) {
 	int len;
-	struct ipc_message msg;
+	struct ipc_message msg = {};
 
 	msg.type = JOINED;
 	msg.joined.result = res;
 
 	len = send(sock, &msg, sizeof(msg), 0);
-	safe_assert(len == sizeof(msg));
+	safe_assert(len > 0 && (size_t) len == sizeof(msg));
 }
 
 class dht_get_callback
@@ -33,8 +33,8 @@ public:
 	unsigned int m_app_id;
 
 	void operator() (bool result, libcage::dht::value_set_ptr vset) {
-		struct ipc_message msg;
-		int len;
+		struct ipc_message msg = {};
+		ssize_t len;
 		char *buf;
 		libcage::dht::value_set::const_iterator it;
 
@@ -43,19 +43,24 @@ public:
 		msg.result.length = vset ? vset->size() : 0;
 
 		len = send(sock, &msg, sizeof(msg), 0);
-		safe_assert(len == sizeof(msg));
+		safe_assert(len > 0 && (int) len == sizeof(msg));
 
 		if (msg.result.length == 0)
 			return;
 
 		BOOST_FOREACH(const libcage::dht::value_t &val, *vset) {
+			size_t length;
+
 			buf = val.value.get();
 
-			len = send(sock, &(val.len), sizeof(val.len), 0);
-			safe_assert(len == sizeof(val.len));
+			length = val.len;
+			safe_assert(val.len > 0);
+
+			len = send(sock, &length, sizeof(length), 0);
+			safe_assert(len > 0 && (int) len == sizeof(length));
 
 			len = send(sock, buf, val.len, 0);
-			safe_assert(len == val.len);
+			safe_assert(len > 0 && (int) len == val.len);
 		}
 	}
 };
@@ -71,6 +76,8 @@ dht_get(libcage::cage *cage, unsigned int app_id, char *key, int keylen,
 	/* construct lookup key */
 	len = sizeof(app_id) + keylen;
 	buf = (unsigned int *) malloc(len);
+	safe_assert(buf != NULL);
+
 	buf[0] = htonl(app_id);
 	memcpy(&(buf[1]), key, keylen);
 
@@ -90,6 +97,7 @@ dht_put(libcage::cage *cage, unsigned int app_id, char *key, int keylen,
 	/* construct lookup key */
 	len = sizeof(app_id) + keylen;
 	buf = (unsigned int *) malloc(len);
+	safe_assert(buf != NULL);
 	buf[0] = htonl(app_id);
 	memcpy(&(buf[1]), key, keylen);
 
@@ -102,19 +110,19 @@ dht_send_node_list(std::list<libcage::cageaddr> const nodes) {
 	unsigned int max_host_len = MAX(INET6_ADDRSTRLEN, INET_ADDRSTRLEN);
 	char host[max_host_len];
 	std::list<libcage::cageaddr>::const_iterator it;
-	struct ipc_message msg;
+	struct ipc_message msg = {};
 	unsigned short port;
 	libcage::in6_ptr in6;
 	libcage::in_ptr in4;
 	const char *res;
-	int length;
+	size_t length;
 	int len;
 
 	msg.type = NODE_LIST;
 	msg.node_list.length = nodes.size();
 
 	len = send(sock, &msg, sizeof(msg), 0);
-	safe_assert(len == sizeof(msg));
+	safe_assert(len > 0 && (size_t) len == sizeof(msg));
 
 	for (it = nodes.begin(); it != nodes.end(); it++) {
 		if (it->domain == PF_INET6) {
@@ -132,14 +140,14 @@ dht_send_node_list(std::list<libcage::cageaddr> const nodes) {
 		safe_assert(res != NULL);
 
 		len = send(sock, &port, sizeof(port), 0);
-		safe_assert(len == sizeof(port));
+		safe_assert(len > 0 && (size_t) len == sizeof(port));
 
 		length = strlen(host)+1;
 		len = send(sock, &length, sizeof(length), 0);
-		safe_assert(len == sizeof(length));
+		safe_assert(len > 0 && (size_t) len == sizeof(length));
 
 		len = send(sock, host, length, 0);
-		safe_assert(len == length);
+		safe_assert(len > 0 && (size_t) len == length);
 	}
 }
 
@@ -148,7 +156,7 @@ dht_on_ipc(int fd, short ev_type, void *user_data)
 {
 	libcage::cage *cage = (libcage::cage *) user_data;
 	std::list<libcage::cageaddr> nodes;
-	struct ipc_message msg;
+	struct ipc_message msg = {};
 	std::string str;
 	ssize_t len;
 	char *key;
@@ -157,13 +165,15 @@ dht_on_ipc(int fd, short ev_type, void *user_data)
 	char *id;
 
 	len = recv(fd, &msg, sizeof(msg), MSG_WAITALL);
-	safe_assert(len == sizeof(msg));
+	safe_assert((size_t) len == sizeof(msg));
 
 	switch(msg.type) {
 	case JOIN:
 		// TODO: timer that retries to join every 60 sec if not connected.
 		host = (char *) malloc(msg.join.hostlen);
+		safe_assert(host != NULL);
 		len = recv(fd, host, msg.join.hostlen, MSG_WAITALL);
+		safe_assert((size_t) len == msg.join.hostlen);
 
 		cage->join(host, msg.join.port, dht_on_joined);
 
@@ -172,9 +182,10 @@ dht_on_ipc(int fd, short ev_type, void *user_data)
 
 	case GET:
 		key = (char *) malloc(msg.get.keylen);
+		safe_assert(key != NULL);
 
 		len = recv(fd, key, msg.get.keylen, MSG_WAITALL);
-		safe_assert(len == msg.get.keylen);
+		safe_assert((size_t) len == msg.get.keylen);
 
 		dht_get(cage, msg.get.app_id, key, msg.get.keylen, msg.get.user_data);
 		free(key);
@@ -183,12 +194,14 @@ dht_on_ipc(int fd, short ev_type, void *user_data)
 	case PUT:
 		key = (char *) malloc(msg.put.keylen);
 		value = (char *) malloc(msg.put.valuelen);
+		safe_assert(key != NULL);
+		safe_assert(value != NULL);
 
 		len = recv(fd, key, msg.put.keylen, MSG_WAITALL);
-		safe_assert(len == msg.put.keylen);
+		safe_assert((size_t) len == msg.put.keylen);
 
 		len = recv(fd, value, msg.put.valuelen, MSG_WAITALL);
-		safe_assert(len == msg.put.valuelen);
+		safe_assert((size_t) len == msg.put.valuelen);
 
 		dht_put(cage, msg.put.app_id,
 			key, msg.put.keylen,
@@ -211,17 +224,18 @@ dht_on_ipc(int fd, short ev_type, void *user_data)
 		msg.node_id.length = strlen(id)+1;
 
 		len = send(sock, &msg, sizeof(msg), 0);
-		safe_assert(len == sizeof(msg));
+		safe_assert((size_t) len == sizeof(msg));
 
 		len = send(sock, id, msg.node_id.length, 0);
-		safe_assert(len == msg.node_id.length);
+		safe_assert((size_t) len == msg.node_id.length);
 		break;
 
 	case SET_NODE_ID:
 		id = (char *) malloc(msg.node_id.length);
+		safe_assert(id != NULL);
 
 		len = recv(sock, id, msg.node_id.length, MSG_WAITALL);
-		safe_assert(len == msg.node_id.length);
+		safe_assert((size_t) len == msg.node_id.length);
 
 		str = std::string(id, len);
 		cage->set_id_str(str);
@@ -248,7 +262,7 @@ dht_run(int socket, int port) {
 	cage->open(AF_INET6, port);
 
 	/* setup ipc */
-	struct event ev;
+	struct event ev = {};
 	event_set(&ev, sock, EV_READ | EV_PERSIST, dht_on_ipc, cage);
 	event_add(&ev, NULL);
 

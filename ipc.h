@@ -12,38 +12,38 @@ enum ipc_type {
 };
 
 struct join_message {
-	unsigned int hostlen;
+	size_t hostlen;
 	unsigned short int port;
 };
 
 struct put_message {
 	unsigned int app_id;
-	unsigned int keylen;
-	unsigned int valuelen;
+	size_t keylen;
+	size_t valuelen;
 	unsigned int ttl;
 };
 
 struct get_message {
 	unsigned int app_id;
-	unsigned int keylen;
+	size_t keylen;
 	void *user_data;
 };
 
 struct result_message {
-	int length;
+	size_t length;
 	void *user_data;
 };
 
 struct joined_message {
-	int result;
+	size_t result;
 };
 
 struct node_list_message {
-	int length;
+	size_t length;
 };
 
 struct node_id_message {
-	int length;
+	size_t length;
 };
 
 struct ipc_message {

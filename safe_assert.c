@@ -1,12 +1,13 @@
 #include <assert.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "safe_assert.h"
 
 void
-safe_assert(int cond) {
+safe_assert(bool cond) {
 	assert(cond);
-	if (cond == 0) {
+	if (!cond) {
 		exit(EXIT_FAILURE);
 	}
 }
