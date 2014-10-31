@@ -94,10 +94,10 @@ settings_load_node_id(const char *id, size_t len) {
 	msg.node_id.length = len;
 
 	length = send(sock, &msg, sizeof(msg), 0);
-	safe_assert(length == sizeof(msg));
+	safe_assert_io(length, sizeof(msg), size_t);
 
 	length = send(sock, id, msg.node_id.length, 0);
-	safe_assert(length == msg.node_id.length);
+	safe_assert_io(length, sizeof(msg.node_id.length), size_t);
 
 out:
 	g_variant_unref(val);
