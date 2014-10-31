@@ -61,11 +61,10 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 			len = recv(sock, buf, size, flags);
 			safe_assert_io(len, size, size_t);
 
-			//buf[len] = '\0';
 			results[i] = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,
 				buf, len, sizeof(char));
 
-			//free(buf);
+			free(buf);
 		}
 
 		invocation = (GDBusMethodInvocation *) msg.result.user_data;
@@ -95,8 +94,8 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 		for (i = 0; i < msg.result.length; ++i) {
 			len = recv(sock, &size, sizeof(size), flags);
 			safe_assert_io(len, sizeof(size), size_t);
+			
 			safe_assert(size > 0);
-
 			buf = safe_malloc(size);
 
 			len = recv(sock, buf, size, flags);
