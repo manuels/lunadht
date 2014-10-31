@@ -38,7 +38,7 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 	if (len <= 0)
 		return TRUE;
 	else
-		safe_assert(len > 0 && (size_t) len == sizeof(msg));
+		safe_assert_io(len, sizeof(msg), size_t);
 
 	switch(msg.type) {
 	case JOINED:
@@ -54,13 +54,13 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 
 		for (i = 0; i < msg.result.length; ++i) {
 			len = recv(sock, &size, sizeof(size), flags);
-			safe_assert(len > 0 && (size_t) len == sizeof(size));
+			safe_assert_io(len, sizeof(size), size_t);
 
 			buf = malloc(size);
 			safe_assert(buf != NULL);
 
 			len = recv(sock, buf, size, flags);
-			safe_assert(len > 0 && (size_t) len == size);
+			safe_assert_io(len, size, size_t);
 
 			//buf[len] = '\0';
 			results[i] = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,
@@ -81,8 +81,8 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 		safe_assert(id != NULL);
 
 		len = recv(sock, id, msg.node_id.length, 0);
-		safe_assert(len > 0 && (size_t) len == msg.node_id.length);
-
+		safe_assert_io(len, msg.node_id.length, size_t);
+		
 		settings_save_node_id(id, len);
 
 		free(id);
@@ -96,16 +96,16 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 
 		for (i = 0; i < msg.result.length; ++i) {
 			len = recv(sock, &size, sizeof(size), flags);
-			safe_assert(len > 0 && len == sizeof(size));
+			safe_assert_io(len, sizeof(size), size_t);
 
 			buf = malloc(size);
 			safe_assert(buf != NULL);
 
 			len = recv(sock, buf, size, flags);
-			safe_assert(len > 0 && (size_t) len == size);
+			safe_assert_io(len, size, size_t);
 
 			len = recv(sock, &(node_list[i].port), sizeof(node_list[i].port), flags);
-			safe_assert(len > 0 && (size_t) len == sizeof(node_list[i].port));
+			safe_assert_io(len, sizeof(node_list[i].port), size_t);
 
 			node_list[i].host = buf;
 		}
@@ -116,7 +116,7 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 
 		msg.type = QUIT;
 		len = send(sock, &msg, sizeof(msg), 0);
-		safe_assert(len > 0 && (size_t) len == sizeof(msg));
+		safe_assert_io(len, sizeof(msg), size_t);
 
 		g_main_quit(main_loop);
 		break;
@@ -142,10 +142,10 @@ dbus_on_join(LunaDHT *dht,
 	msg.join.port = port;
 
 	len = send(sock, &msg, sizeof(msg), 0);
-	safe_assert(len > 0 && (size_t) len == sizeof(msg));
+	safe_assert_io(len, sizeof(msg), size_t);
 
 	len = send(sock, host, strlen(host)+1, 0);
-	safe_assert(len > 0 && (size_t) len == strlen(host)+1);
+	safe_assert_io(len, strlen(host)+1, size_t);
 
 	if (dht && invocation)
 		luna_dht_complete_join(dht, invocation);
@@ -172,10 +172,10 @@ dbus_on_get(LunaDHT *dht,
 	msg.get.user_data = invocation;
 
 	len = send(sock, &msg, sizeof(msg), 0);
-	safe_assert(len > 0 && (size_t) len == sizeof(msg));
+	safe_assert_io(len, sizeof(msg), size_t);
 
 	len = send(sock, key, msg.get.keylen, 0);
-	safe_assert(len > 0 && (size_t) len == msg.get.keylen);
+	safe_assert_io(len, msg.get.keylen, size_t);
 
 	return TRUE;
 }
@@ -206,13 +206,13 @@ dbus_on_put(LunaDHT *dht,
 
 	g_debug("dht-dbus put: keylen=%lu vallen=%lu", keylen, valuelen);
 	len = send(sock, &msg, sizeof(msg), 0);
-	safe_assert(len > 0 && (size_t) len == sizeof(msg));
+	safe_assert_io(len, sizeof(msg), size_t);
 
 	len = send(sock, key, msg.put.keylen, 0);
-	safe_assert(len > 0 && (size_t) len == msg.put.keylen);
+	safe_assert_io(len, msg.put.keylen, size_t);
 
 	len = send(sock, value, msg.put.valuelen, 0);
-	safe_assert(len > 0 && (size_t) len == msg.put.valuelen);
+	safe_assert_io(len, msg.put.valuelen, size_t);
 
 	luna_dht_complete_put(dht, invocation);
 

@@ -23,7 +23,7 @@ dht_on_joined(bool res) {
 	msg.joined.result = res;
 
 	len = send(sock, &msg, sizeof(msg), 0);
-	safe_assert(len > 0 && (size_t) len == sizeof(msg));
+	safe_assert_io(len, sizeof(msg), size_t);
 }
 
 class dht_get_callback
@@ -43,7 +43,7 @@ public:
 		msg.result.length = vset ? vset->size() : 0;
 
 		len = send(sock, &msg, sizeof(msg), 0);
-		safe_assert(len > 0 && (int) len == sizeof(msg));
+		safe_assert_io(len, sizeof(msg), size_t);
 
 		if (msg.result.length == 0)
 			return;
@@ -57,10 +57,10 @@ public:
 			safe_assert(val.len > 0);
 
 			len = send(sock, &length, sizeof(length), 0);
-			safe_assert(len > 0 && (int) len == sizeof(length));
+			safe_assert_io(len, sizeof(length), size_t);
 
 			len = send(sock, buf, val.len, 0);
-			safe_assert(len > 0 && (int) len == val.len);
+			safe_assert_io(len, val.len, size_t);
 		}
 	}
 };
@@ -71,7 +71,7 @@ dht_get(libcage::cage *cage, unsigned int app_id, char *key, int keylen,
 {
 	int len;
 	unsigned int *buf;
-	dht_get_callback on_get_finished;
+	dht_get_callback on_get_finished;  
 
 	/* construct lookup key */
 	len = sizeof(app_id) + keylen;
@@ -122,7 +122,7 @@ dht_send_node_list(std::list<libcage::cageaddr> const nodes) {
 	msg.node_list.length = nodes.size();
 
 	len = send(sock, &msg, sizeof(msg), 0);
-	safe_assert(len > 0 && (size_t) len == sizeof(msg));
+	safe_assert_io(len, sizeof(msg), size_t);
 
 	for (it = nodes.begin(); it != nodes.end(); it++) {
 		if (it->domain == PF_INET6) {
@@ -140,14 +140,14 @@ dht_send_node_list(std::list<libcage::cageaddr> const nodes) {
 		safe_assert(res != NULL);
 
 		len = send(sock, &port, sizeof(port), 0);
-		safe_assert(len > 0 && (size_t) len == sizeof(port));
+		safe_assert_io(len, sizeof(port), size_t);
 
 		length = strlen(host)+1;
 		len = send(sock, &length, sizeof(length), 0);
-		safe_assert(len > 0 && (size_t) len == sizeof(length));
+		safe_assert_io(len, sizeof(length), size_t);
 
 		len = send(sock, host, length, 0);
-		safe_assert(len > 0 && (size_t) len == length);
+		safe_assert_io(len, sizeof(length), size_t);
 	}
 }
 
@@ -165,7 +165,7 @@ dht_on_ipc(int fd, short ev_type, void *user_data)
 	char *id;
 
 	len = recv(fd, &msg, sizeof(msg), MSG_WAITALL);
-	safe_assert((size_t) len == sizeof(msg));
+	safe_assert_io(len, sizeof(msg), size_t);
 
 	switch(msg.type) {
 	case JOIN:
@@ -173,7 +173,7 @@ dht_on_ipc(int fd, short ev_type, void *user_data)
 		host = (char *) malloc(msg.join.hostlen);
 		safe_assert(host != NULL);
 		len = recv(fd, host, msg.join.hostlen, MSG_WAITALL);
-		safe_assert((size_t) len == msg.join.hostlen);
+		safe_assert_io(len, msg.join.hostlen, size_t);
 
 		cage->join(host, msg.join.port, dht_on_joined);
 
@@ -185,7 +185,7 @@ dht_on_ipc(int fd, short ev_type, void *user_data)
 		safe_assert(key != NULL);
 
 		len = recv(fd, key, msg.get.keylen, MSG_WAITALL);
-		safe_assert((size_t) len == msg.get.keylen);
+		safe_assert_io(len, msg.get.keylen, size_t);
 
 		dht_get(cage, msg.get.app_id, key, msg.get.keylen, msg.get.user_data);
 		free(key);
@@ -198,10 +198,10 @@ dht_on_ipc(int fd, short ev_type, void *user_data)
 		safe_assert(value != NULL);
 
 		len = recv(fd, key, msg.put.keylen, MSG_WAITALL);
-		safe_assert((size_t) len == msg.put.keylen);
+		safe_assert_io(len, msg.put.keylen, size_t);
 
 		len = recv(fd, value, msg.put.valuelen, MSG_WAITALL);
-		safe_assert((size_t) len == msg.put.valuelen);
+		safe_assert_io(len, msg.put.valuelen, size_t);
 
 		dht_put(cage, msg.put.app_id,
 			key, msg.put.keylen,
@@ -224,10 +224,10 @@ dht_on_ipc(int fd, short ev_type, void *user_data)
 		msg.node_id.length = strlen(id)+1;
 
 		len = send(sock, &msg, sizeof(msg), 0);
-		safe_assert((size_t) len == sizeof(msg));
+		safe_assert_io(len, sizeof(msg), size_t);
 
 		len = send(sock, id, msg.node_id.length, 0);
-		safe_assert((size_t) len == msg.node_id.length);
+		safe_assert_io(len, sizeof(msg.node_id.length), size_t);
 		break;
 
 	case SET_NODE_ID:
@@ -235,7 +235,7 @@ dht_on_ipc(int fd, short ev_type, void *user_data)
 		safe_assert(id != NULL);
 
 		len = recv(sock, id, msg.node_id.length, MSG_WAITALL);
-		safe_assert((size_t) len == msg.node_id.length);
+		safe_assert_io(len, sizeof(msg.node_id.length), size_t);
 
 		str = std::string(id, len);
 		cage->set_id_str(str);
