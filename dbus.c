@@ -35,10 +35,7 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 	dht = LUNA_DHT(user_data);
 
 	len = recv(sock, &msg, sizeof(msg), flags);
-	if (len <= 0)
-		return TRUE;
-	else
-		safe_assert_io(len, sizeof(msg), size_t);
+	safe_assert_io(len, sizeof(msg), size_t);
 
 	switch(msg.type) {
 	case JOINED:
