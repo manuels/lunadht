@@ -60,7 +60,7 @@ public:
 			safe_assert_io(len, sizeof(length), size_t);
 
 			len = send(sock, buf, val.len, 0);
-			safe_assert_io(len, val.len, size_t);
+			safe_assert_io(len, val.len, int);
 		}
 	}
 };
@@ -75,8 +75,7 @@ dht_get(libcage::cage *cage, unsigned int app_id, char *key, int keylen,
 
 	/* construct lookup key */
 	len = sizeof(app_id) + keylen;
-	buf = (unsigned int *) malloc(len);
-	safe_assert(buf != NULL);
+	buf = (unsigned int *) safe_malloc(len);
 
 	buf[0] = htonl(app_id);
 	memcpy(&(buf[1]), key, keylen);
@@ -96,8 +95,8 @@ dht_put(libcage::cage *cage, unsigned int app_id, char *key, int keylen,
 
 	/* construct lookup key */
 	len = sizeof(app_id) + keylen;
-	buf = (unsigned int *) malloc(len);
-	safe_assert(buf != NULL);
+	buf = (unsigned int *) safe_malloc(len);
+
 	buf[0] = htonl(app_id);
 	memcpy(&(buf[1]), key, keylen);
 
@@ -170,8 +169,7 @@ dht_on_ipc(int fd, short ev_type, void *user_data)
 	switch(msg.type) {
 	case JOIN:
 		// TODO: timer that retries to join every 60 sec if not connected.
-		host = (char *) malloc(msg.join.hostlen);
-		safe_assert(host != NULL);
+		host = (char *) safe_malloc(msg.join.hostlen);
 		len = recv(fd, host, msg.join.hostlen, MSG_WAITALL);
 		safe_assert_io(len, msg.join.hostlen, size_t);
 
@@ -181,8 +179,7 @@ dht_on_ipc(int fd, short ev_type, void *user_data)
 		break;
 
 	case GET:
-		key = (char *) malloc(msg.get.keylen);
-		safe_assert(key != NULL);
+		key = (char *) safe_malloc(msg.get.keylen);
 
 		len = recv(fd, key, msg.get.keylen, MSG_WAITALL);
 		safe_assert_io(len, msg.get.keylen, size_t);
@@ -192,10 +189,8 @@ dht_on_ipc(int fd, short ev_type, void *user_data)
 		break;
 
 	case PUT:
-		key = (char *) malloc(msg.put.keylen);
-		value = (char *) malloc(msg.put.valuelen);
-		safe_assert(key != NULL);
-		safe_assert(value != NULL);
+		key = (char *) safe_malloc(msg.put.keylen);
+		value = (char *) safe_malloc(msg.put.valuelen);
 
 		len = recv(fd, key, msg.put.keylen, MSG_WAITALL);
 		safe_assert_io(len, msg.put.keylen, size_t);
@@ -231,8 +226,7 @@ dht_on_ipc(int fd, short ev_type, void *user_data)
 		break;
 
 	case SET_NODE_ID:
-		id = (char *) malloc(msg.node_id.length);
-		safe_assert(id != NULL);
+		id = (char *) safe_malloc(msg.node_id.length);
 
 		len = recv(sock, id, msg.node_id.length, MSG_WAITALL);
 		safe_assert_io(len, sizeof(msg.node_id.length), size_t);

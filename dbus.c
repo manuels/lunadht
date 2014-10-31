@@ -30,7 +30,7 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 	int flags = MSG_WAITALL;
 	size_t size;
 	ssize_t len;
-	int i;
+	size_t i;
 
 	dht = LUNA_DHT(user_data);
 
@@ -56,8 +56,7 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 			len = recv(sock, &size, sizeof(size), flags);
 			safe_assert_io(len, sizeof(size), size_t);
 
-			buf = malloc(size);
-			safe_assert(buf != NULL);
+			buf = safe_malloc(size);
 
 			len = recv(sock, buf, size, flags);
 			safe_assert_io(len, size, size_t);
@@ -77,8 +76,7 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 		break;
 
 	case GET_NODE_ID:
-		id = malloc(msg.node_id.length);
-		safe_assert(id != NULL);
+		id = safe_malloc(msg.node_id.length);
 
 		len = recv(sock, id, msg.node_id.length, 0);
 		safe_assert_io(len, msg.node_id.length, size_t);
@@ -97,9 +95,9 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 		for (i = 0; i < msg.result.length; ++i) {
 			len = recv(sock, &size, sizeof(size), flags);
 			safe_assert_io(len, sizeof(size), size_t);
+			safe_assert(size > 0);
 
-			buf = malloc(size);
-			safe_assert(buf != NULL);
+			buf = safe_malloc(size);
 
 			len = recv(sock, buf, size, flags);
 			safe_assert_io(len, size, size_t);
@@ -111,7 +109,9 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 		}
 
 		settings_save_nodes(node_list, msg.result.length);
-		// TODO: free(node_list[:]);
+
+		for (i = 0; i < msg.result.length; ++i)
+			free(node_list[i].host);
 		free(node_list);
 
 		msg.type = QUIT;

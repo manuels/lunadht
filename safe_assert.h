@@ -8,4 +8,6 @@
 
 #define safe_assert(cond) do { assert(cond); if (!(cond)) { exit(EXIT_FAILURE); } } while(0)
 
+void *safe_malloc(size_t size);
+
 #endif
