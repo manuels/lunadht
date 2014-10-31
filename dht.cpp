@@ -235,6 +235,7 @@ dht_on_ipc(int fd, short ev_type, void *user_data)
 		cage->set_id_str(str);
 
 		free(id);
+		break;
 
 	case QUIT:
 		event_loopbreak();
@@ -242,6 +243,7 @@ dht_on_ipc(int fd, short ev_type, void *user_data)
 
 	default:
 		safe_assert("should not be reached" && (1!=1));
+		break;
 	}
 }
 

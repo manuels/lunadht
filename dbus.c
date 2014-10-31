@@ -61,7 +61,7 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 			len = recv(sock, buf, size, flags);
 			safe_assert_io(len, size, size_t);
 
-			results[i] = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,
+			results[i] = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,  
 				buf, len, sizeof(char));
 
 			free(buf);
@@ -122,6 +122,7 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 
 	default:
 		safe_assert("should not be reached " && (0==1));
+		break;
 	}
 
 	return TRUE;
