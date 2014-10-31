@@ -223,6 +223,7 @@ static void
 dbus_on_name_acquired(GDBusConnection *dbus_conn,
 	                     const gchar *name,
 	                     gpointer user_data) {
+	GError *err = NULL;
 	LunaDHT *dht;
 	char path[] = "/org/manuel/LunaDHT";
 	
@@ -230,7 +231,8 @@ dbus_on_name_acquired(GDBusConnection *dbus_conn,
 
 	dht = luna_dht_skeleton_new();
 	g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(dht),
-	        dbus_conn, path, NULL);
+	        dbus_conn, path, &err);
+	safe_assert(!err);
 
 	g_signal_connect(dht, "handle_put", G_CALLBACK(dbus_on_put), dbus_conn);
 	g_signal_connect(dht, "handle_get", G_CALLBACK(dbus_on_get), dbus_conn);
