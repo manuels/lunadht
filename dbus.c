@@ -45,12 +45,12 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, LunaDHT *dht)
 	case RESULT:
 		g_debug("result len=%zu!\n", msg.result.length);
 
-		if (msg.result.length > 0) {
+		if (msg.result.length == 0)
+			results = NULL;
+		else {
 			results = calloc(msg.result.length, sizeof(GVariant *));
 			safe_assert(results != NULL);
 		}
-		else
-			results = NULL;
 
 		for (i = 0; i < msg.result.length; ++i) {
 			len = recv(sock, &size, sizeof(size), flags);
@@ -88,7 +88,7 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, LunaDHT *dht)
 	case NODE_LIST:
 		g_debug("node_list len=%zu!\n", msg.node_list.length);
 
-		node_list = calloc(msg.node_list.length+1, sizeof(struct node));
+		node_list = calloc(msg.node_list.length, sizeof(struct node));
 		safe_assert(node_list != NULL);
 
 		for (i = 0; i < msg.result.length; ++i) {
@@ -249,12 +249,12 @@ dbus_on_name_acquired(GDBusConnection *dbus_conn,
 
 void
 dbus_on_sig_abort() {
-	if(settings == NULL)
+	if (settings == NULL)
 		return;
 
-	struct ipc_message msg;
-
+	struct ipc_message msg = {};
 	msg.type = QUIT;
+
 	send(sock, &msg, sizeof(msg), 0);
 
 	g_main_loop_quit(main_loop);

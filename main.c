@@ -25,15 +25,18 @@ int main(int argc, char *argv[]) {
 
 	while ((opt = getopt(argc, argv, "b:p:")) != -1) {
 		switch (opt) {
-		case 'b':
-			dbus_name = strdup(optarg);
-			break;
-		case 'p':
-			port = atoi(optarg);
-			break;
 		default: /* '?' */
 			printf("Usage: %s [-b dbus_busname] [-p udp_port]\n", argv[0]);
 			exit(1);
+			break;
+
+		case 'b':
+			dbus_name = strdup(optarg);
+			break;
+			
+		case 'p':
+			port = atoi(optarg);
+			break;
 		}
 	}
 

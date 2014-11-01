@@ -174,6 +174,10 @@ dht_on_ipc(int fd, short ev_type, void *user_data)
 	safe_assert_io(len, sizeof(msg), size_t);
 
 	switch(msg.type) {
+	default:
+		safe_assert("should not be reached" && (1!=1));
+		break;
+
 	case JOIN:
 		// TODO: timer that retries to join every 60 sec if not connected.
 		host = (char *) safe_malloc(msg.join.hostlen);
@@ -246,10 +250,6 @@ dht_on_ipc(int fd, short ev_type, void *user_data)
 
 	case QUIT:
 		event_loopbreak();
-		break;
-
-	default:
-		safe_assert("should not be reached" && (1!=1));
 		break;
 	}
 }
