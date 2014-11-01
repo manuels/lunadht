@@ -65,20 +65,32 @@ public:
 	}
 };
 
+static size_t
+construct_lookup_key(unsigned int app_id, char *key, size_t keylen,
+	unsigned int **buf)
+{
+	size_t len;
+
+	len = sizeof(app_id) + keylen;
+	safe_assert(len > sizeof(app_id) && len > keylen);
+
+	*buf = (unsigned int *) safe_malloc(len);
+
+	(*buf)[0] = htonl(app_id);
+	memcpy(&((*buf)[1]), key, keylen);
+
+	return len;
+}
+
 static void
-dht_get(libcage::cage *cage, unsigned int app_id, char *key, int keylen,
+dht_get(libcage::cage *cage, unsigned int app_id, char *key, size_t keylen,
 	void *user_data)
 {
-	int len;
+	size_t len;
 	unsigned int *buf;
 	dht_get_callback on_get_finished;  
 
-	/* construct lookup key */
-	len = sizeof(app_id) + keylen;
-	buf = (unsigned int *) safe_malloc(len);
-
-	buf[0] = htonl(app_id);
-	memcpy(&(buf[1]), key, keylen);
+	len = construct_lookup_key(app_id, key, keylen, &buf);
 
 	on_get_finished.m_user_data = user_data;
 	cage->get(buf, len, on_get_finished);
@@ -87,18 +99,13 @@ dht_get(libcage::cage *cage, unsigned int app_id, char *key, int keylen,
 }
 
 static void
-dht_put(libcage::cage *cage, unsigned int app_id, char *key, int keylen,
+dht_put(libcage::cage *cage, unsigned int app_id, char *key, size_t keylen,
 	char *value, int valuelen, int unsigned ttl)
 {
 	int len;
 	unsigned int *buf;
 
-	/* construct lookup key */
-	len = sizeof(app_id) + keylen;
-	buf = (unsigned int *) safe_malloc(len);
-
-	buf[0] = htonl(app_id);
-	memcpy(&(buf[1]), key, keylen);
+	len = construct_lookup_key(app_id, key, keylen, &buf);
 
 	cage->put(buf, len, value, valuelen, ttl);
 	free(buf);
