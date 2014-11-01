@@ -153,7 +153,7 @@ dht_send_node_list(std::list<libcage::cageaddr> const nodes) {
 		safe_assert_io(len, sizeof(length), size_t);
 
 		len = send(sock, host, length, 0);
-		safe_assert_io(len, sizeof(length), size_t);
+		safe_assert_io(len, length, size_t);
 	}
 }
 
@@ -233,14 +233,14 @@ dht_on_ipc(int fd, short ev_type, void *user_data)
 		safe_assert_io(len, sizeof(msg), size_t);
 
 		len = send(sock, id, msg.node_id.length, 0);
-		safe_assert_io(len, sizeof(msg.node_id.length), size_t);
+		safe_assert_io(len, msg.node_id.length, size_t);
 		break;
 
 	case SET_NODE_ID:
 		id = (char *) safe_malloc(msg.node_id.length);
 
 		len = recv(sock, id, msg.node_id.length, MSG_WAITALL);
-		safe_assert_io(len, sizeof(msg.node_id.length), size_t);
+		safe_assert_io(len, msg.node_id.length, size_t);
 
 		str = std::string(id, len);
 		cage->set_id_str(str);
