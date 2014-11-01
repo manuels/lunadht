@@ -271,5 +271,7 @@ dht_run(int socket, int port) {
 
 	event_dispatch();
 
+	close(sock);
+
 	return 0;
 }
