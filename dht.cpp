@@ -29,8 +29,7 @@ dht_on_joined(bool res) {
 class dht_get_callback
 {
 public:
-	void *m_user_data;
-	unsigned int m_app_id;
+	dht_get_callback(void *user_data) : m_user_data(user_data) {}
 
 	void operator() (bool result, libcage::dht::value_set_ptr vset) {
 		struct ipc_message msg = {};
@@ -63,6 +62,9 @@ public:
 			safe_assert_io(len, val.len, int);
 		}
 	}
+
+protected:
+	void *m_user_data;
 };
 
 static size_t
@@ -88,11 +90,9 @@ dht_get(libcage::cage *cage, unsigned int app_id, char *key, size_t keylen,
 {
 	size_t len;
 	unsigned int *buf;
-	dht_get_callback on_get_finished;  
+	dht_get_callback on_get_finished(user_data);
 
 	len = construct_lookup_key(app_id, key, keylen, &buf);
-
-	on_get_finished.m_user_data = user_data;
 	cage->get(buf, len, on_get_finished);
 
 	free(buf);
@@ -106,8 +106,8 @@ dht_put(libcage::cage *cage, unsigned int app_id, char *key, size_t keylen,
 	unsigned int *buf;
 
 	len = construct_lookup_key(app_id, key, keylen, &buf);
-
 	cage->put(buf, len, value, valuelen, ttl);
+
 	free(buf);
 }
 
