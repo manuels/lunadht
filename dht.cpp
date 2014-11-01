@@ -40,7 +40,7 @@ public:
 
 		msg.type = RESULT;
 		msg.result.user_data = this->m_user_data;
-		msg.result.length = vset ? vset->size() : 0;
+		msg.result.length = (vset && result) ? vset->size() : 0;
 
 		len = send(sock, &msg, sizeof(msg), 0);
 		safe_assert_io(len, sizeof(msg), size_t);
