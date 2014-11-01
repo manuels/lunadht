@@ -45,8 +45,12 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, LunaDHT *dht)
 	case RESULT:
 		g_debug("result len=%zu!\n", msg.result.length);
 
-		results = calloc(msg.result.length, sizeof(GVariant *));
-		safe_assert(results != NULL);
+		if (msg.result.length > 0) {
+			results = calloc(msg.result.length, sizeof(GVariant *));
+			safe_assert(results != NULL);
+		}
+		else
+			results = NULL;
 
 		for (i = 0; i < msg.result.length; ++i) {
 			len = recv(sock, &size, sizeof(size), flags);
@@ -131,7 +135,7 @@ dbus_on_join(LunaDHT *dht,
     const guint16 port)
 {
 	ssize_t len;
-	struct ipc_message msg;
+	struct ipc_message msg = {};
 
 	msg.type = JOIN;
 	msg.join.hostlen = strlen(host)+1;
@@ -140,8 +144,8 @@ dbus_on_join(LunaDHT *dht,
 	len = send(sock, &msg, sizeof(msg), 0);
 	safe_assert_io(len, sizeof(msg), size_t);
 
-	len = send(sock, host, strlen(host)+1, 0);
-	safe_assert_io(len, strlen(host)+1, size_t);
+	len = send(sock, host, msg.join.hostlen, 0);
+	safe_assert_io(len, msg.join.hostlen, size_t);
 
 	if (dht && invocation)
 		luna_dht_complete_join(dht, invocation);
@@ -155,7 +159,7 @@ dbus_on_get(LunaDHT *dht,
     guint app_id,
     GVariant *arg_key)
 {
-	struct ipc_message msg;
+	struct ipc_message msg = {};
 	const char *key;
 	gsize keylen;
 	ssize_t len;
@@ -184,7 +188,7 @@ dbus_on_put(LunaDHT *dht,
     GVariant *arg_value,
     guint64 ttl)
 {
-	struct ipc_message msg;
+	struct ipc_message msg = {};
 	const char *key;
 	const char *value;
 	gsize keylen;
@@ -218,9 +222,11 @@ dbus_on_put(LunaDHT *dht,
 static void
 dbus_on_name_acquired(GDBusConnection *dbus_conn,
 	                     const gchar *name,
-	                     gpointer user_data) {
+	                     gpointer user_data)
+{
 	GError *err = NULL;
 	LunaDHT *dht;
+	GIOChannel *ch;
 	char path[] = "/org/manuel/LunaDHT";
 	
 	g_debug("DBus name aquired.");
@@ -237,7 +243,7 @@ dbus_on_name_acquired(GDBusConnection *dbus_conn,
 	g_object_set(dht, "joined", FALSE, NULL);
 
 	/* setup ipc */
-	GIOChannel *ch = g_io_channel_unix_new(sock);
+	ch = g_io_channel_unix_new(sock);
 	g_io_add_watch(ch, G_IO_IN, (GIOFunc) dbus_on_ipc, dht);
 }
 
@@ -272,6 +278,8 @@ int dbus_run(int socket, char *dbus_name) {
 	settings_load_nodes();
 
 	g_main_loop_run(main_loop);
+
+	close(sock);
 
 	return 0;
 }
