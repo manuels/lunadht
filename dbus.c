@@ -17,10 +17,9 @@ int sock;
 static GMainLoop *main_loop;
 
 static gboolean
-dbus_on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
+dbus_on_ipc(GIOChannel *src, GIOCondition condition, LunaDHT *dht)
 {
 	GDBusMethodInvocation *invocation;
-	LunaDHT *dht;
 	GVariant *res;
 	struct ipc_message msg = {};
 	char *buf;
@@ -32,7 +31,7 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, gpointer user_data)
 	ssize_t len;
 	size_t i;
 
-	dht = LUNA_DHT(user_data);
+	safe_assert(dht); // TODO: make sure to prevent use-after-free
 
 	len = recv(sock, &msg, sizeof(msg), flags);
 	safe_assert_io(len, sizeof(msg), size_t);
@@ -239,7 +238,7 @@ dbus_on_name_acquired(GDBusConnection *dbus_conn,
 
 	/* setup ipc */
 	GIOChannel *ch = g_io_channel_unix_new(sock);
-	g_io_add_watch(ch, G_IO_IN, dbus_on_ipc, dht);
+	g_io_add_watch(ch, G_IO_IN, (GIOFunc) dbus_on_ipc, dht);
 }
 
 void

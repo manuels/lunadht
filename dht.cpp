@@ -2,9 +2,9 @@
 #include <event.h>
 
 #include "libcage/src/cage.hpp"
-#include "ipc.h"
 
 extern "C" {
+#include "ipc.h"
 #include "safe_assert.h"
 }
 
