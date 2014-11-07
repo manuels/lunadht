@@ -131,14 +131,14 @@ dht_send_node_list(std::list<libcage::cageaddr> const nodes) {
 	safe_assert_io(len, sizeof(msg), size_t);
 
 	for (it = nodes.begin(); it != nodes.end(); it++) {
-		if (it->domain == PF_INET6) {
+		if (it->domain == libcage::domain_inet6) {
 			in6 = boost::get<libcage::in6_ptr>(it->saddr);
-			res = inet_ntop(it->domain, &(*in6), host, sizeof(host));
+			res = inet_ntop(AF_INET6, &(in6->sin6_addr), host, sizeof(host));
 			port = ntohs(in6->sin6_port);
 		}
-		else if (it->domain == PF_INET) {
+		else if (it->domain == libcage::domain_inet) {
 			in4 = boost::get<libcage::in_ptr>(it->saddr);
-			res = inet_ntop(it->domain, &(*in4), host, sizeof(host));
+			res = inet_ntop(AF_INET, &(in4->sin_addr), host, sizeof(host));
 			port = ntohs(in4->sin_port);
 		}
 		else
@@ -221,7 +221,6 @@ dht_on_ipc(int fd, short ev_type, void *user_data)
 	case NODE_LIST:
 		nodes = cage->get_table();
 		dht_send_node_list(nodes);
-		// TODO: free nodes?
 		break;
 
 	case GET_NODE_ID:

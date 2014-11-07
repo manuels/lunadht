@@ -13,6 +13,12 @@
 extern int sock;
 GSettings *settings = NULL;
 
+gboolean
+dbus_on_join(gpointer *dht,
+    GDBusMethodInvocation *invocation,
+    const gchar *host,
+    const guint16 port);
+
 void
 settings_save_nodes(struct node *nodes, size_t len) {
 	if (settings == NULL)
@@ -21,12 +27,18 @@ settings_save_nodes(struct node *nodes, size_t len) {
 	GVariantBuilder *builder;
 	GVariant *res;
 
-	builder = g_variant_builder_new(G_VARIANT_TYPE("a(aq)"));
+	builder = g_variant_builder_new(G_VARIANT_TYPE("a(ayq)"));
 
 	while(len > 0) {
-		g_variant_builder_open(builder, G_VARIANT_TYPE("(aq)"));
-		//g_variant_builder_add_value(builder,
-		//	g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, *results, length[i], sizeof(char)));
+		g_variant_builder_open(builder, G_VARIANT_TYPE("(ayq)"));
+
+		g_variant_builder_add_value(builder,
+			g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,
+				nodes->host,
+				strlen(nodes->host)+1,
+				sizeof(char)));
+		g_variant_builder_add(builder, "q", nodes->port);
+
 		g_variant_builder_close(builder);
 
 		nodes++;
@@ -40,21 +52,23 @@ settings_save_nodes(struct node *nodes, size_t len) {
 
 int
 settings_load_nodes() {
-	if (settings == NULL)
-		return -1;
-
 	GVariant *nodes;
 	char *host = NULL;
 	guint16 port;
 	int i;
 
-	settings = g_settings_new_with_path("org.manuel.LunaDHT", ".");
+	settings = g_settings_new_with_path("org.manuel.LunaDHT", "/org/manuel/LunaDHT/");
 
 	nodes = g_settings_get_value(settings, "nodes");
 
 	for (i = 0; i < g_variant_n_children(nodes); ++i) {
-		g_variant_get_child(nodes, i, "(&sq)", host, &port);
-		//on_dbus_join(NULL, NULL, host, port); TODO
+		g_variant_get_child(nodes, i, "(^&ayq)", &host, &port);
+
+		if (host == NULL)
+			continue;
+
+		g_debug("Joining via node [%s]:%u ", host, port);
+		dbus_on_join(NULL, NULL, host, port);
 	}
 
 	g_variant_unref(nodes);
@@ -102,4 +116,3 @@ settings_load_node_id(const char *id, size_t len) {
 out:
 	g_variant_unref(val);
 }
-

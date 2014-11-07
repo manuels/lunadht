@@ -1,14 +1,12 @@
 <schemalist>
-  <schema id="org.manuel.LunaDHT" path="/org/manuel/LunaDHT/">
+	<schema id="org.manuel.LunaDHT" path="/org/manuel/LunaDHT/">
+		<key name="nodes" type="a(ayq)">
+			<!-- (host, port) -->
+			<default>[]</default>
+		</key>
 
-    <key name="nodes" type="a(sq)">
-      <!-- (host, port) -->
-      <default>[]</default>
-    </key>
-
-    <key name="id" type="ay">
-      <default></default>
-    </key>
-
-  </schema>
+		<key name="id" type="ay">
+			<default>[]</default>
+		</key>
+	</schema>
 </schemalist>

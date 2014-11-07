@@ -92,6 +92,9 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, LunaDHT *dht)
 		safe_assert(node_list != NULL);
 
 		for (i = 0; i < msg.result.length; ++i) {
+			len = recv(sock, &(node_list[i].port), sizeof(node_list[i].port), flags);
+			safe_assert_io(len, sizeof(node_list[i].port), size_t);
+
 			len = recv(sock, &size, sizeof(size), flags);
 			safe_assert_io(len, sizeof(size), size_t);
 			
@@ -101,10 +104,8 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, LunaDHT *dht)
 			len = recv(sock, buf, size, flags);
 			safe_assert_io(len, size, size_t);
 
-			len = recv(sock, &(node_list[i].port), sizeof(node_list[i].port), flags);
-			safe_assert_io(len, sizeof(node_list[i].port), size_t);
-
 			node_list[i].host = buf;
+			g_debug("node_list %i host=%s port=%u", i, node_list[i].host, node_list[i].port);
 		}
 
 		settings_save_nodes(node_list, msg.result.length);
@@ -128,7 +129,7 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, LunaDHT *dht)
 	return TRUE;
 }
 
-static gboolean
+gboolean
 dbus_on_join(LunaDHT *dht,
     GDBusMethodInvocation *invocation,
     const gchar *host,
@@ -248,21 +249,24 @@ dbus_on_name_acquired(GDBusConnection *dbus_conn,
 }
 
 void
-dbus_on_sig_abort() {
+dbus_on_sig_term() {
+	g_debug("DBUS thread got SIGTERM");
+
 	if (settings == NULL)
 		return;
 
 	struct ipc_message msg = {};
-	msg.type = QUIT;
 
+	msg.type = NODE_LIST;
 	send(sock, &msg, sizeof(msg), 0);
 
-	g_main_loop_quit(main_loop);
+	msg.type = QUIT;
+	send(sock, &msg, sizeof(msg), 0);
 }
 
 int dbus_run(int socket, char *dbus_name) {
 	g_type_init();
-	signal(SIGABRT, dbus_on_sig_abort);
+	signal(SIGTERM, dbus_on_sig_term);
 
 	int flags = G_BUS_NAME_OWNER_FLAGS_ALLOW_REPLACEMENT |
 	        G_BUS_NAME_OWNER_FLAGS_REPLACE;
