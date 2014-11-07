@@ -50,14 +50,16 @@ settings_save_nodes(struct node *nodes, size_t len) {
 	g_variant_builder_unref(builder);
 }
 
+void settings_init() {
+	settings = g_settings_new_with_path("org.manuel.LunaDHT", "/org/manuel/LunaDHT/");
+}
+
 int
 settings_load_nodes() {
 	GVariant *nodes;
 	char *host = NULL;
 	guint16 port;
 	int i;
-
-	settings = g_settings_new_with_path("org.manuel.LunaDHT", "/org/manuel/LunaDHT/");
 
 	nodes = g_settings_get_value(settings, "nodes");
 
@@ -84,24 +86,26 @@ settings_save_node_id(char *id, size_t len) {
 	GVariant *val;
 	val = g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, id, len, sizeof(char));
 
-	g_settings_set_value(settings, "id", val);
+	g_assert(g_settings_set_value(settings, "id", val));
 	g_variant_unref(val);
 }
 
 
 void
-settings_load_node_id(const char *id, size_t len) {
+settings_load_node_id() {
 	if (settings == NULL)
 		return;
 
 	int length;
 	GVariant *val;
+	const char *id;
+	size_t len;
 	struct ipc_message msg = {};
 
 	val = g_settings_get_value(settings, "id");
 	id = g_variant_get_fixed_array(val, &len, sizeof(char));
 
-	if (id == NULL);
+	if (id == NULL)
 		goto out;
 
 	msg.type = SET_NODE_ID;
@@ -111,7 +115,7 @@ settings_load_node_id(const char *id, size_t len) {
 	safe_assert_io(length, sizeof(msg), size_t);
 
 	length = send(sock, id, msg.node_id.length, 0);
-	safe_assert_io(length, sizeof(msg.node_id.length), size_t);
+	safe_assert_io(length, msg.node_id.length, size_t);
 
 out:
 	g_variant_unref(val);

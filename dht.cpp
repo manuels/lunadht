@@ -242,7 +242,12 @@ dht_on_ipc(int fd, short ev_type, void *user_data)
 		safe_assert_io(len, msg.node_id.length, size_t);
 
 		str = std::string(id, len);
-		cage->set_id_str(str);
+
+		/*
+		 * Restoring the old id currently does not work.
+		 * But I'm also not sure if it is worth it.
+		 */
+		//cage->set_id_str(str);
 
 		free(id);
 		break;

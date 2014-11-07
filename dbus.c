@@ -79,6 +79,7 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, LunaDHT *dht)
 
 		len = recv(sock, id, msg.node_id.length, 0);
 		safe_assert_io(len, msg.node_id.length, size_t);
+		safe_assert(id[msg.node_id.length-1] == '\0');
 		
 		settings_save_node_id(id, len);
 
@@ -105,7 +106,7 @@ dbus_on_ipc(GIOChannel *src, GIOCondition condition, LunaDHT *dht)
 			safe_assert_io(len, size, size_t);
 
 			node_list[i].host = buf;
-			g_debug("node_list %i host=%s port=%u", i, node_list[i].host, node_list[i].port);
+			g_debug("node_list %lu host=%s port=%u", i, node_list[i].host, node_list[i].port);
 		}
 
 		settings_save_nodes(node_list, msg.result.length);
@@ -257,6 +258,9 @@ dbus_on_sig_term() {
 
 	struct ipc_message msg = {};
 
+	msg.type = GET_NODE_ID;
+	send(sock, &msg, sizeof(msg), 0);
+
 	msg.type = NODE_LIST;
 	send(sock, &msg, sizeof(msg), 0);
 
@@ -279,6 +283,8 @@ int dbus_run(int socket, char *dbus_name) {
 	g_bus_own_name(G_BUS_TYPE_SESSION, dbus_name, flags,
 	        NULL, dbus_on_name_acquired, NULL, NULL, NULL);
 
+	settings_init();
+	settings_load_node_id();
 	settings_load_nodes();
 
 	g_main_loop_run(main_loop);
