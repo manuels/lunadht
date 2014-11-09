@@ -2,7 +2,7 @@
 	<schema id="org.manuel.LunaDHT" path="/org/manuel/LunaDHT/">
 		<key name="nodes" type="a(ayq)">
 			<!-- (host, port) -->
-			<default>[]</default>
+			<default>[["176.10.126.54", 7786], ["2a00:bd80:10:511:82a:96ff:fefd:939a", 7786]]</default>
 		</key>
 
 		<key name="id" type="ay">
