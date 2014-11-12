@@ -15,6 +15,7 @@
 
 int sock;
 static GMainLoop *main_loop;
+static struct node **bootstrapping_nodes = NULL;
 
 static gboolean
 dbus_on_ipc(GIOChannel *src, GIOCondition condition, LunaDHT *dht)
@@ -138,6 +139,7 @@ dbus_on_join(LunaDHT *dht,
 {
 	ssize_t len;
 	struct ipc_message msg = {};
+	struct node *n;
 
 	msg.type = JOIN;
 	msg.join.hostlen = strlen(host)+1;
@@ -149,8 +151,22 @@ dbus_on_join(LunaDHT *dht,
 	len = send(sock, host, msg.join.hostlen, 0);
 	safe_assert_io(len, msg.join.hostlen, size_t);
 
-	if (dht && invocation)
+	if (dht && invocation) {
 		luna_dht_complete_join(dht, invocation);
+
+		len = 0;
+		if (bootstrapping_nodes)
+			while (bootstrapping_nodes[len] != NULL)
+				len++;
+
+		bootstrapping_nodes = safe_realloc(bootstrapping_nodes, len+2, sizeof(struct node*));
+		n = safe_malloc(sizeof(struct node));
+		n->host = strdup(host);
+		n->port = port;
+
+		bootstrapping_nodes[len] = n;
+		bootstrapping_nodes[len+1] = NULL;
+	}
 
 	return TRUE;
 }
@@ -180,6 +196,23 @@ dbus_on_get(LunaDHT *dht,
 	safe_assert_io(len, msg.get.keylen, size_t);
 
 	return TRUE;
+}
+
+gboolean
+retry_join(LunaDHT *dht) {
+	struct node *n;
+	int i = 0;
+
+	while ((n = bootstrapping_nodes[i])) {
+		dbus_on_join(NULL, NULL, n->host, n->port);
+
+		i++;
+	}
+
+	gboolean joined = FALSE;
+	g_object_get(dht, "joined", &joined, NULL);
+
+	return !joined;
 }
 
 static gboolean
@@ -243,6 +276,8 @@ dbus_on_name_acquired(GDBusConnection *dbus_conn,
 	g_signal_connect(dht, "handle_join", G_CALLBACK(dbus_on_join), dbus_conn);
 
 	g_object_set(dht, "joined", FALSE, NULL);
+
+	g_timeout_add_seconds(15, (GSourceFunc) retry_join, dht);
 
 	/* setup ipc */
 	ch = g_io_channel_unix_new(sock);

@@ -33,10 +33,7 @@ settings_save_nodes(struct node *nodes, size_t len) {
 		g_variant_builder_open(builder, G_VARIANT_TYPE("(sq)"));
 
 		g_variant_builder_add_value(builder,
-			g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,
-				nodes->host,
-				strlen(nodes->host)+1,
-				sizeof(char)));
+			g_variant_new_string(nodes->host));
 		g_variant_builder_add(builder, "q", nodes->port);
 
 		g_variant_builder_close(builder);
