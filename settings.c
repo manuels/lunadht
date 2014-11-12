@@ -27,10 +27,10 @@ settings_save_nodes(struct node *nodes, size_t len) {
 	GVariantBuilder *builder;
 	GVariant *res;
 
-	builder = g_variant_builder_new(G_VARIANT_TYPE("a(ayq)"));
+	builder = g_variant_builder_new(G_VARIANT_TYPE("a(sq)"));
 
 	while(len > 0) {
-		g_variant_builder_open(builder, G_VARIANT_TYPE("(ayq)"));
+		g_variant_builder_open(builder, G_VARIANT_TYPE("(sq)"));
 
 		g_variant_builder_add_value(builder,
 			g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE,
@@ -64,7 +64,7 @@ settings_load_nodes() {
 	nodes = g_settings_get_value(settings, "nodes");
 
 	for (i = 0; i < g_variant_n_children(nodes); ++i) {
-		g_variant_get_child(nodes, i, "(^&ayq)", &host, &port);
+		g_variant_get_child(nodes, i, "(&sq)", &host, &port);
 
 		if (host == NULL)
 			continue;
