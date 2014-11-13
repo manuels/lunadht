@@ -6,7 +6,7 @@
 
 	<method name="join">
 		<arg type="s" name="host" direction="in" />
-		<arg type="q" name="ip" direction="in" />
+		<arg type="q" name="port" direction="in" />
 	</method>
 
 	<method name="get">

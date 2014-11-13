@@ -203,10 +203,12 @@ retry_join(LunaDHT *dht) {
 	struct node *n;
 	int i = 0;
 
-	while ((n = bootstrapping_nodes[i])) {
-		dbus_on_join(NULL, NULL, n->host, n->port);
+	if (bootstrapping_nodes) {
+		while ((n = bootstrapping_nodes[i])) {
+			dbus_on_join(NULL, NULL, n->host, n->port);
 
-		i++;
+			i++;
+		}
 	}
 
 	gboolean joined = FALSE;
