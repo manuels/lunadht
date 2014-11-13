@@ -1,13 +1,27 @@
 # LunaDHT
 
+Your general purpose distributed-hash-table (DHT) accessible via DBus.
 
-Your general purpose distributed-hash-table (DHT)
+## Installation
+
+    git clone https://github.com/manuels/lunadht.git
+    cd lunadht
+    git submodule update --init --recursive
+    cd libcage
+    omake .
+    make
+    cd ..
+    make
+    
+    XDG_DATA_DIRS=. ./lunadhtd
+    
 
 ## Security
 
 LunaDHT is a young software project and it might be vulnerable to attacks.
 Despite potential software bugs, distributed hash tables suffer from these flaws:
 
+- Anyone can read what you put into the DHT
 - An attacker might give manipulated values stored for a key
 - An attacker might not give any values stored for a key, although you stored a value for it
 
