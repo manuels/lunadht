@@ -1,6 +1,6 @@
 # LunaDHT
 
-Your general purpose distributed-hash-table (DHT) accessable via DBus
+Your general purpose distributed-hash-table (DHT) accessible via DBus.
 
 ## Installation
 
