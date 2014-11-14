@@ -42,7 +42,7 @@ and try to get it again
     $ ./demo_get.py 4321 "What is the answer to the great question, of life, the universe and everything?"
     42
 
-Your value can take up to 924 bytes.
+You can store values up to 924 bytes.
 
 ## DBus API
 
