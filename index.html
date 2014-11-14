@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="description" content="Lunadht : Your general purpose DHT">
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Lunadht</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/manuels/lunadht">View on GitHub</a>
+
+          <h1 id="project_title">Lunadht</h1>
+          <h2 id="project_tagline">Your general purpose DHT</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/manuels/lunadht/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/manuels/lunadht/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h1>
+<a id="lunadht" class="anchor" href="#lunadht" aria-hidden="true"><span class="octicon octicon-link"></span></a>LunaDHT</h1>
+
+<p>Your general purpose distributed-hash-table (DHT) accessible via DBus.</p>
+
+<h2>
+<a id="installation" class="anchor" href="#installation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Installation</h2>
+
+<pre><code>git clone https://github.com/manuels/lunadht.git
+cd lunadht
+git submodule update --init --recursive
+cd libcage
+omake .
+make
+cd ..
+make
+
+XDG_DATA_DIRS=. ./lunadhtd
+</code></pre>
+
+<h2>
+<a id="security" class="anchor" href="#security" aria-hidden="true"><span class="octicon octicon-link"></span></a>Security</h2>
+
+<p>LunaDHT is a young software project and it might be vulnerable to attacks.
+Despite potential software bugs, distributed hash tables suffer from these flaws:</p>
+
+<ul>
+<li>Anyone can read what you put into the DHT</li>
+<li>An attacker might give manipulated values stored for a key</li>
+<li>An attacker might not give any values stored for a key, although you stored a value for it</li>
+</ul>
+
+<h2>
+<a id="demo" class="anchor" href="#demo" aria-hidden="true"><span class="octicon octicon-link"></span></a>Demo</h2>
+
+<p>Start the LunaDHT daemon</p>
+
+<pre><code>$ XDG_DATA_DIRS=. ./lunadhtd &amp;
+</code></pre>
+
+<p>Then store something in the DHT</p>
+
+<pre><code># Usage: ./demo_put.py &lt;app_id&gt; &lt;key&gt;
+$ ./demo_put.py 4321 "What is the answer to the great question, of life, the universe and everything?" "42"
+</code></pre>
+
+<p>and try to get it again</p>
+
+<pre><code># Usage: ./demo_get.py &lt;app_id&gt; &lt;key&gt; &lt;value&gt;
+$ ./demo_get.py 4321 "What is the answer to the great question, of life, the universe and everything?"
+42
+</code></pre>
+
+<p>You can store values up to 924 bytes.</p>
+
+<h2>
+<a id="dbus-api" class="anchor" href="#dbus-api" aria-hidden="true"><span class="octicon octicon-link"></span></a>DBus API</h2>
+
+<p>Bus name: <code>org.manuel.LunaDHT</code></p>
+
+<p>Path: <code>org/manuel/LunaDHT</code></p>
+
+<p>Interface: <code>org.manuel.LunaDHT</code></p>
+
+<h3>
+<a id="methods" class="anchor" href="#methods" aria-hidden="true"><span class="octicon octicon-link"></span></a>Methods</h3>
+
+<p>You can choose your <code>app_id</code> freely but make sure you use the same value for it on all machines. Its purpose is to minimize conflicting key-value pairs between applications.</p>
+
+<pre><code>put(uint32 api_id, char* key, char* value, int64 ttl)
+</code></pre>
+
+<p>Store <code>value</code> under <code>key</code> with a time-to-live of <code>ttl</code> in seconds.</p>
+
+<pre><code>get(uint32 api_id, char* key) -&gt; array of char* values
+</code></pre>
+
+<p>Get <code>values</code> stored under <code>key</code></p>
+
+<pre><code>join(char *host, uint16 port)
+</code></pre>
+
+<p>Join the DHT network using the node at <code>host:port</code></p>
+
+<h2>
+<a id="bootstrapping-nodes" class="anchor" href="#bootstrapping-nodes" aria-hidden="true"><span class="octicon octicon-link"></span></a>Bootstrapping Nodes</h2>
+
+<p>Currently I am running a single bootstrapping node (see nodes.gschema.xml for IPv4/v6 addresses). It is used by default so you don't have to call <code>join</code> for it.
+If you would like to support the LunaDHT network by running your own bootstrapping node, drop me a mail.</p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Lunadht maintained by <a href="https://github.com/manuels">manuels</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
