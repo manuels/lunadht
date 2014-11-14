@@ -25,6 +25,24 @@ Despite potential software bugs, distributed hash tables suffer from these flaws
 - An attacker might give manipulated values stored for a key
 - An attacker might not give any values stored for a key, although you stored a value for it
 
+## Demo
+
+Start the LunaDHT daemon
+
+    $ XDG_DATA_DIRS=. ./lunadhtd &
+
+Then store something in the DHT
+    
+    # Usage: ./demo_put.py <app_id> <key>
+    $ ./demo_put.py 4321 "What is the answer to the great question, of life,
+    $ ./the universe and everything?" "42"
+
+and try to get it again
+
+    # Usage: ./demo_put.py <app_id> <key>
+    $ ./demo_get.py 4321 "What is the answer to the great question, of life, the universe and everything?"
+    42
+
 ## DBus API
 
 Bus name: `org.manuel.LunaDHT`
