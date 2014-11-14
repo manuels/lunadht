@@ -33,12 +33,12 @@ Start the LunaDHT daemon
 
 Then store something in the DHT
     
-    # Usage: ./demo_put.py <app_id> <key>
+    # Usage: ./demo_put.py <app_id> <key> <value>
     $ ./demo_put.py 4321 "What is the answer to the great question, of life, the universe and everything?" "42"
 
 and try to get it again
 
-    # Usage: ./demo_get.py <app_id> <key> <value>
+    # Usage: ./demo_get.py <app_id> <key>
     $ ./demo_get.py 4321 "What is the answer to the great question, of life, the universe and everything?"
     42
 
