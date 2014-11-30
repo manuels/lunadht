@@ -6,8 +6,8 @@ Your general purpose distributed-hash-table (DHT) accessible via DBus.
 
 ### On Debian
 
-curl https://raw.githubusercontent.com/manuels/lunadht/debian/lunadht-0.0.1-0.deb -o /tmp/lunadht-0.0.1-0.deb
-sudo dpkg -i /tmp/lunadht-0.0.1-0.deb
+    curl https://raw.githubusercontent.com/manuels/lunadht/debian/lunadht-0.0.1-0.deb -o /tmp/lunadht-0.0.1-0.deb
+    sudo dpkg -i /tmp/lunadht-0.0.1-0.deb
 
 ## From source
 
