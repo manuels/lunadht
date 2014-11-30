@@ -23,10 +23,10 @@ def main(app_id, key):
 	bus_name = 'org.manuel.LunaDHT'
 	dht = bus.get_object(bus_name, '/org/manuel/LunaDHT')
 
-	res = dht.get(app_id, key, dbus_interface='org.manuel.LunaDHT')
-	if len(res) > 0:
-		result = ''.join([chr(x) for x in res[0]])
-		print result
+	results = dht.get(app_id, key, dbus_interface='org.manuel.LunaDHT')
+	if len(results) > 0:
+		for res in results:
+			print ''.join([chr(x) for x in res])
 	else:
 		print >>sys.stderr, "Nothing found :("
 
