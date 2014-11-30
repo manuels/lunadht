@@ -34,7 +34,7 @@ Despite potential software bugs, distributed hash tables suffer from these flaws
 
 ## Demo
 
-Start the LunaDHT daemon
+Start the LunaDHT daemon (only neccessary if not installed via Debian's package manager)
 
     $ XDG_DATA_DIRS=. ./lunadhtd &
 
