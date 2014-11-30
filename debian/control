@@ -1,0 +1,11 @@
+Source: lunadht
+Version: 0.0.1-0
+Maintainer: Manuel Schölling <manuel.schoelling@gmx.de>
+Section: misc
+Priority: optional
+Package: lunadht
+Architecture: amd64
+Depends: libglib2.0-0
+Description: Your general purpose DHT 
+ LunaDHT is a distributed hash table. You can use it to share small bits of
+ arbitrary data between computers.
